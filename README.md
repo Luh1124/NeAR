@@ -35,10 +35,7 @@ This repository combines:
 ## Teaser
 
 <div align="center">
-  <video width="100%" autoplay loop muted playsinline controls>
-    <source src="https://near-project.github.io/static/teaser/video.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
+  <img src="assets/teaser/teaser.gif" alt="NeAR teaser" width="100%" />
 </div>
 
 **Relightable 3D generative rendering results.** Columns from left to right depict the target illumination, the casually lit input image, Blender-rendered results from Trellis 3D, Hunyuan 3D-2.1 (with PBR materials), our method's estimated multi-view PBR materials back-projected onto the given mesh, our neural rendering results, and ground truth.
@@ -52,30 +49,7 @@ The following videos are produced by the local NeAR example pipeline and are use
 - **Relighting under rotating HDRI**: material response changes under time-varying illumination.
 
 <div align="center">
-  <table>
-    <tr>
-      <td align="center"><strong>Camera-path relighting</strong></td>
-      <td align="center"><strong>HDRI roll preview</strong></td>
-      <td align="center"><strong>Rotating-HDRI relighting</strong></td>
-    </tr>
-    <tr>
-      <td>
-        <video width="100%" autoplay loop muted playsinline controls>
-          <source src="relight_out/relight_camera_path.mp4" type="video/mp4">
-        </video>
-      </td>
-      <td>
-        <video width="100%" autoplay loop muted playsinline controls>
-          <source src="relight_out/hdri_roll.mp4" type="video/mp4">
-        </video>
-      </td>
-      <td>
-        <video width="100%" autoplay loop muted playsinline controls>
-          <source src="relight_out/relight_hdri_rotation.mp4" type="video/mp4">
-        </video>
-      </td>
-    </tr>
-  </table>
+  <img src="assets/pbr_vis/pbrvideo.gif" alt="NeAR material and relighting visualization" width="100%" />
 </div>
 
 If these local videos are not present, you can generate them with `example.py` and `--video_frames > 0`.
