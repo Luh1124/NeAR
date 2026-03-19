@@ -315,15 +315,37 @@ This avoids recomputing geometry and latent generation every time you want to te
 - [TRELLIS](https://github.com/microsoft/TRELLIS)
 - [NeAR Project Page](https://near-project.github.io)
 - [Hunyuan3D](https://huggingface.co/tencent/Hunyuan3D-2.1)
+- [DiLightNet](https://dilightnet.github.io/)
+- [Neural Gaffer](https://neural-gaffer.github.io/)
+- [DiffusionRenderer](https://research.nvidia.com/labs/toronto-ai/DiffusionRenderer/)
+- [MeshGen](https://heheyas.github.io/MeshGen/)
+- [RGB↔X](https://zheng95z.github.io/publications/rgbx24)
 
 ---
 
 ## Acknowledgements
 
-This repository builds on and adapts components from:
+This repository builds on and adapts ideas, codebases, and problem settings from several recent works on structured 3D latents, relighting, inverse rendering, and PBR-aware 3D generation, including:
 
-- **TRELLIS** for structured latent generation,
-- **Hunyuan3D** for geometry generation,
+- **TRELLIS** for structured latent generation and sparse 3D asset representations,
+- **Hunyuan3D 2.1** for image-to-geometry generation,
+- **DiLightNet** and **Neural Gaffer** for diffusion-based lighting control and object relighting,
+- **DiffusionRenderer** for neural inverse / forward rendering under complex appearance and illumination,
+- **MeshGen** for PBR textured mesh generation,
+- **RGB↔X** for material- and lighting-aware decomposition and synthesis,
 - environment-map-based relighting workflows for HDR-conditioned neural rendering.
 
-If you use this code, please also check the licenses and terms of the upstream dependencies and models.
+We thank the authors of these projects for releasing their papers, code, models, and project pages. If you use this repository, please also check the licenses and terms of the upstream dependencies and models.
+
+## BibTeX
+
+If you find this project useful, please consider citing our paper:
+
+```bibtex
+@inproceedings{li2025near,
+  title={NeAR: Coupled Neural Asset-Renderer Stack},
+  author={Li, Hong and Ye, Chongjie and Chen, Houyuan and Xiao, Weiqing and Yan, Ziyang and Xiao, Lixing and Chen, Zhaoxi and Xiang, Jianfeng and Xu, Shaocong and Liu, Xuhui and Wang, Yikai and Zhang, Baochang and Han, Xiaoguang and Yang, Jiaolong and Zhao, Hao},
+  booktitle={CVPR},
+  year={2026}
+}
+```
