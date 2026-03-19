@@ -333,7 +333,6 @@ This repository builds on and adapts ideas, codebases, and problem settings from
 - **DiffusionRenderer** for neural inverse / forward rendering under complex appearance and illumination,
 - **MeshGen** for PBR textured mesh generation,
 - **RGB↔X** for material- and lighting-aware decomposition and synthesis,
-- environment-map-based relighting workflows for HDR-conditioned neural rendering.
 
 We thank the authors of these projects for releasing their papers, code, models, and project pages. If you use this repository, please also check the licenses and terms of the upstream dependencies and models.
 
