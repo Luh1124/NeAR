@@ -1,7 +1,19 @@
+from __future__ import annotations
+
+import re
+from pathlib import Path
 from typing import *
+
 import torch
 import torch.nn as nn
+
 from .. import models
+
+
+def _is_hub_model_id(s: str) -> bool:
+    """`org/model` style id, not a filesystem path."""
+    t = s.strip().replace("\\", "/")
+    return bool(re.fullmatch(r"[\w.-]+/[\w.-]+", t))
 
 
 class Pipeline:
@@ -19,35 +31,63 @@ class Pipeline:
             model.eval()
 
     @staticmethod
+    def _resolve_pretrained_root(path: str) -> str:
+        """Local directory with ``pipeline.yaml``, or Hub ``org/model`` (full snapshot cache)."""
+        import os
+
+        path = path.strip()
+        root = Path(path).expanduser()
+        cfg = root / "pipeline.yaml"
+        if cfg.is_file():
+            return str(root.resolve())
+
+        if root.is_dir():
+            raise FileNotFoundError(
+                f"Missing pipeline.yaml under {root.resolve()}. "
+                "Add checkpoints or pass a Hub repo id (e.g. luh0502/NeAR)."
+            )
+
+        if _is_hub_model_id(path):
+            from huggingface_hub import snapshot_download
+
+            print(f"[Pipeline] Downloading Hub snapshot {path!r} ...", flush=True)
+            out = snapshot_download(repo_id=path, token=os.environ.get("HF_TOKEN"))
+            print("[Pipeline] Hub snapshot ready.", flush=True)
+            return out
+
+        raise FileNotFoundError(
+            f"Not a local checkpoint directory and not a Hub repo id: {path!r}"
+        )
+
+    @staticmethod
     def from_pretrained(path: str) -> "Pipeline":
         """
-        Load a pretrained model.
+        Load a pretrained pipeline from a local directory or Hugging Face Hub ``org/model``.
+
+        Local: folder containing ``pipeline.yaml`` (and ``ckpts/``, ``weights/``, ...).
+        Hub: ``snapshot_download`` into the HF cache, same layout as the model repo.
         """
-        import os
         import json
+        import os
+
         import yaml
 
         def _load_config(config_file: str) -> dict:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                if config_file.endswith(('.yaml', '.yml')):
-                    return yaml.safe_load(f)['args']
-                return json.load(f)['args']
+            with open(config_file, "r", encoding="utf-8") as f:
+                if config_file.endswith((".yaml", ".yml")):
+                    return yaml.safe_load(f)["args"]
+                return json.load(f)["args"]
 
-        config_file = f"{path}/pipeline.yaml"
-
-        if config_file is None:
-            from huggingface_hub import hf_hub_download
-            config_file = hf_hub_download(path, "pipeline.yaml")
-            print(f"Downloaded config file from {config_file}")
-        else:
-            print(f"Using local config file from {config_file}")
+        root = Pipeline._resolve_pretrained_root(path)
+        config_file = os.path.join(root, "pipeline.yaml")
+        print(f"[Pipeline] Using config {config_file}", flush=True)
         args = _load_config(config_file)
 
         _models = {}
-        for k, v in args['models'].items():
+        for k, v in args["models"].items():
             try:
-                _models[k] = models.from_pretrained(f"{path}/{v}")
-            except:
+                _models[k] = models.from_pretrained(os.path.join(root, v))
+            except Exception:
                 _models[k] = models.from_pretrained(v)
 
         new_pipeline = Pipeline(_models)
@@ -67,6 +107,9 @@ class Pipeline:
     def to(self, device: torch.device) -> None:
         for model in self.models.values():
             model.to(device)
+        rembg = getattr(self, "rembg_model", None)
+        if rembg is not None and hasattr(rembg, "to"):
+            rembg.to(device)
 
     def cuda(self) -> None:
         self.to(torch.device("cuda"))

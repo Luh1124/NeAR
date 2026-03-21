@@ -402,10 +402,16 @@ outputs
 .pixi/*
 !.pixi/config.toml
 
-# relight_out/
+relight_out/
 
 checkpoints/
 
 hy3dshape/
 
 UltraShape-1.0/
+
+.vscode/
+
+.gradio/
+
+tmp_gradio/

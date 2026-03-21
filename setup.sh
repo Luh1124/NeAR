@@ -19,6 +19,7 @@ KAOLIN=false
 NVDIFFRAST=false
 DEMO=false
 HY3D=false
+# U3D=false
 
 if [ "$#" -eq 1 ] ; then
     HELP=true
@@ -40,6 +41,7 @@ while true ; do
         --nvdiffrast) NVDIFFRAST=true ; shift ;;
         --demo) DEMO=true ; shift ;;
         --hy3d) HY3D=true ; shift ;;
+        # --u3d) U3D=true ; shift ;;
         --) shift ; break ;;
         *) ERROR=true ; break ;;
     esac
@@ -67,6 +69,7 @@ if [ "$HELP" = true ] ; then
     echo "  --nvdiffrast            Install nvdiffrast"
     echo "  --demo                  Install all dependencies for demo"
     echo "  --hy3d                  Install hy3dshape"
+    # echo "  --u3d                   Install UltraShape-1.0"
     return
 fi
 
@@ -110,7 +113,7 @@ case $PLATFORM in
 esac
 
 if [ "$BASIC" = true ] ; then
-    pip install pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless scipy ninja rembg onnxruntime trimesh open3d xatlas pyvista pymeshfix igraph transformers pyexr gsplat
+    pip install pillow imageio imageio-ffmpeg tqdm easydict opencv-python-headless scipy ninja rembg onnxruntime trimesh open3d xatlas pyvista pymeshfix igraph transformers==4.57.6 pyexr gsplat
     pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8
 fi
 
@@ -178,7 +181,7 @@ fi
 
 if [ "$FLASHATTN" = true ] ; then
     if [ "$PLATFORM" = "cuda" ] ; then
-        pip install flash-attn
+        pip install  --no-cache-dir flash-attn==2.8.2 --no-build-isolation
     elif [ "$PLATFORM" = "hip" ] ; then
         echo "[FLASHATTN] Prebuilt binaries not found. Building from source..."
         mkdir -p /tmp/extensions
@@ -268,3 +271,15 @@ if [ "$HY3D" = true ] ; then
     cd $WORKDIR
 fi
 
+
+# if [ "U3D" = true ] ; then
+#     mkdir -p /tmp/extensions
+#     git clone https://github.com/3diclight/UltraShape-1.0.git /tmp/extensions/UltraShape-1.0
+#     cp -r /tmp/extensions/UltraShape-1.0/UltraShape-1.0 .
+#     rm -rf /tmp/extensions/UltraShape-1.0
+#     cd UltraShape-1.0
+#     # pip install -r requirements.txt
+#     pip install pytorch_lightning 
+#     pip install git+https://github.com/ashawkey/cubvh --no-build-isolation
+#     cd $WORKDIR
+# fi
