@@ -177,29 +177,17 @@ python example.py \
   --out_dir relight_out
 ```
 
-## Related Projects
-
-- [TRELLIS](https://github.com/microsoft/TRELLIS)
-- [NeAR Project Page](https://near-project.github.io)
-- [Hunyuan3D](https://huggingface.co/tencent/Hunyuan3D-2.1)
-- [DiLightNet](https://dilightnet.github.io/)
-- [Neural Gaffer](https://neural-gaffer.github.io/)
-- [DiffusionRenderer](https://research.nvidia.com/labs/toronto-ai/DiffusionRenderer/)
-- [MeshGen](https://heheyas.github.io/MeshGen/)
-- [RGB↔X](https://zheng95z.github.io/publications/rgbx24)
-
----
-
 ## Acknowledgements
 
 This repository builds on and adapts ideas, codebases, and problem settings from several recent works on structured 3D latents, relighting, inverse rendering, and PBR-aware 3D generation, including:
 
-- **TRELLIS** for structured latent generation and sparse 3D asset representations,
-- **Hunyuan3D 2.1** for image-to-geometry generation,
-- **DiLightNet** and **Neural Gaffer** for diffusion-based lighting control and object relighting,
-- **DiffusionRenderer** for neural inverse / forward rendering under complex appearance and illumination,
-- **MeshGen** for PBR textured mesh generation,
-- **RGB↔X** for material- and lighting-aware decomposition and synthesis,
+- [TRELLIS](https://github.com/microsoft/TRELLIS) — structured latent generation and sparse 3D asset representations
+- [Hunyuan3D 2.1](https://huggingface.co/tencent/Hunyuan3D-2.1) — image-to-geometry generation and image examples
+- [DiLightNet](https://dilightnet.github.io/) — diffusion-based lighting control
+- [Neural Gaffer](https://neural-gaffer.github.io/) — object relighting
+- [DiffusionRenderer](https://research.nvidia.com/labs/toronto-ai/DiffusionRenderer/) — neural inverse / forward rendering
+- [MeshGen](https://heheyas.github.io/MeshGen/) — PBR textured mesh generation
+- [RGB↔X](https://zheng95z.github.io/publications/rgbx24) — material- and lighting-aware decomposition and synthesis
 
 We thank the authors of these projects for releasing their papers, code, models, and project pages. If you use this repository, please also check the licenses and terms of the upstream dependencies and models.
 
