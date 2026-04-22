@@ -164,6 +164,18 @@ The geometry model is currently run separately in `example.py` via:
 
 - `tencent/Hunyuan3D-2.1`
 
+### Stage-1 Data
+
+The first-stage training data is available on Hugging Face:
+
+- [luh0502/NeAR](https://huggingface.co/datasets/luh0502/NeAR) — stage-1 dataset
+
+### HDR Environment Maps
+
+Preprocessed HDR environment maps used for training and inference:
+
+- [luh0502/hdr_envmaps_exr_4K](https://huggingface.co/datasets/luh0502/hdr_envmaps_exr_4K) — 4K resolution, normalized to 0–65536 float EXR
+
 ---
 
 ## Inference
