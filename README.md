@@ -127,26 +127,7 @@ pip install pyexr simple-ocio open3d rembg imageio easydict
 
 <!-- If you use Hunyuan3D geometry generation, make sure the `hy3dshape` dependencies are also installed. The `hy3dshape` module is sourced from [Tencent-Hunyuan/Hunyuan3D-2.1/hy3dshape](https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/tree/main/hy3dshape). -->
 
-### Viser viewer (optional)
 
-For an interactive neural relighting window (orbit camera, HDRI rotation, low-res while dragging):
-
-```bash
-pip install "viser>=1.0.0"   # or: . ./setup.sh --demo
-python app_viser.py --slat path/to/slat.npz --hdri path/to/env.exr --port 8080
-```
-
-By default the viewer **letterboxes** the square neural render into the browser viewport so the subject is not stretched on wide windows. Use `--no-letterbox` to restore the old full-viewport stretch.
-
-Neural rendering uses perspective **clip planes** (`--clip-near` / `--clip-far`, defaults `0.05` / `32`). The old pipeline default `far=3` only matched orbit radius ~2; pulling the camera out (larger radius) needs a larger far plane or the object disappears.
-
-For a **public link** (experimental), use `--share` and/or the GUI button **Get share URL (tunnel)**; this calls viser’s `request_share_url()` and may require outbound network access. For production sharing, prefer your own reverse proxy, SSH tunnel, or a tunneling tool.
-
-The pipeline exposes `render_relight_color_numpy(hs, rfs, hdri_cond, ...)` for cached decoder / lighting tokens. See `python app_viser.py --help`.
-
----
-
-## Checkpoints
 
 The local pipeline configuration is defined in:
 
@@ -174,7 +155,7 @@ The first-stage training data is available on Hugging Face:
 
 Preprocessed HDR environment maps used for training and inference:
 
-- [luh0502/hdr_envmaps_exr_4K](https://huggingface.co/datasets/luh0502/hdr_envmaps_exr_4K) — 4K resolution, normalized to 0–65536 float EXR
+- [luh0502/hdr_envmaps_exr_1K](https://huggingface.co/datasets/luh0502/hdr_envmaps_exr_1K) — 1K resolution, normalized to 0–65536 float EXR
 
 ---
 

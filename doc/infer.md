@@ -114,3 +114,21 @@ Main NeAR pipeline methods:
 5. Reuse the saved SLaT for different HDRIs, HDRI rotations, and camera paths.
 
 This avoids recomputing geometry and latent generation every time you want to test a new lighting setup.
+
+
+## Interactive Viewer (Viser)
+
+For an interactive neural relighting window (orbit camera, HDRI rotation, low-res while dragging):
+
+```bash
+pip install "viser>=1.0.0"   # or: . ./setup.sh --demo
+python app_viser.py --slat path/to/slat.npz --hdri path/to/env.exr --port 8080
+```
+
+By default the viewer **letterboxes** the square neural render into the browser viewport so the subject is not stretched on wide windows. Use `--no-letterbox` to restore the old full-viewport stretch.
+
+Neural rendering uses perspective **clip planes** (`--clip-near` / `--clip-far`, defaults `0.05` / `32`). The old pipeline default `far=3` only matched orbit radius ~2; pulling the camera out (larger radius) needs a larger far plane or the object disappears.
+
+For a **public link** (experimental), use `--share` and/or the GUI button **Get share URL (tunnel)**; this calls viser's `request_share_url()` and may require outbound network access. For production sharing, prefer your own reverse proxy, SSH tunnel, or a tunneling tool.
+
+The pipeline exposes `render_relight_color_numpy(hs, rfs, hdri_cond, ...)` for cached decoder / lighting tokens. See `python app_viser.py --help`.
