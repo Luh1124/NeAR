@@ -5,9 +5,10 @@
 </div>
 
 <div align="center">
-  <a href="https://arxiv.org/abs/2511.18600"><img src="https://img.shields.io/badge/arXiv-2511.18600-b31b1b?logo=arxiv&logoColor=white" alt="arXiv"></a>
-  <a href="https://near-project.github.io/"><img src="https://img.shields.io/badge/Project_Page-Website-2ea44f?logo=googlechrome&logoColor=white" alt="Project Page"></a>
-  <a href="https://huggingface.co/luh0502/NeAR/tree/main"><img src="https://img.shields.io/badge/HuggingFace-NeAR-f9d949?logo=huggingface&logoColor=black" alt="Hugging Face"></a>
+  <a href="https://arxiv.org/abs/2511.18600"><img src="https://img.shields.io/badge/2511.18600-arXiv-b31b1b?logo=arxiv&logoColor=red" alt="arXiv"></a>
+  <a href="https://near-project.github.io/"><img src="https://img.shields.io/badge/Project_Page-Website-2ea44f?logo=googlechrome&logoColor" alt="Project Page"></a>
+  <a href="https://huggingface.co/luh0502/NeAR/tree/main"><img src="https://img.shields.io/badge/HuggingFace-Weights-f9d949?logo=huggingface&logoColor" alt="Checkpoints"></a>
+  <a href="https://huggingface.co/spaces/luh0502/NeAR"><img src="https://img.shields.io/badge/HuggingFace-Demo-f9d949?logo=huggingface&logoColor" alt="Demo"></a>
 </div>
 
 **NeAR** is a relightable 3D generation and rendering project built on top of **TRELLIS-style Structured Latents (SLAT)** and a lighting-aware neural renderer. Given a casually lit input image, NeAR estimates relightable neural assets and renders them under novel environment lighting and viewpoints.
@@ -23,14 +24,17 @@ This repository combines:
 
 ## Release Status
 
-- [x] Checkpoints / model weights
-- [x] Inference code
-- [ ] Hugging Face demo
-- [ ] Data release
+- [✓] Checkpoints / model weights
+- [✓] Inference code
+- [✓] Hugging Face demo
+- [✓] Data release
 - [ ] Training code
 
-> The Hugging Face demo is currently being deployed.
-> Data and training code are coming soon.
+## News
+- Inference code and Checkpoints have been released! 
+- ⭐ **2025.04** — NeAR has been selected as a **Highlight** at **CVPR 2026**! 
+- The Hugging Face demo is currently being deployed.
+- Data and training code are coming soon.
 
 ## Teaser
 
@@ -52,7 +56,7 @@ The following videos are produced by the local NeAR example pipeline and are use
   <img src="assets/pbr_vis/pbrvideo.gif" alt="NeAR material and relighting visualization" width="100%" />
 </div>
 
-If these local videos are not present, you can generate them with `example.py` and `--video_frames > 0`.
+<!-- If these local videos are not present, you can generate them with `example.py` and `--video_frames > 0`. -->
 
 ---
 
@@ -78,12 +82,13 @@ Key files and directories:
 
 - `example.py` — minimal end-to-end inference example.
 - `app_e.py` — Gradio-style demo / app script.
+- `app_viser.py` — interactive neural relight viewer ([viser](https://github.com/viser-project/viser)); orbit camera + HDRI controls, full-viewport relit RGB (no GLB).
 - `setup.sh` — environment setup helper.
 - `checkpoints/` — local pipeline configuration and model checkpoints.
 - `trellis/pipelines/near_image_to_relightable_3d.py` — main NeAR inference pipeline.
 - `trellis/utils/render_utils_rl.py` — relighting rendering utilities.
 - `trellis/datasets/hdri_processer.py` — HDRI preprocessing and rotation helpers.
-- `hy3dshape/` — local Hunyuan3D code used for geometry generation.
+- `hy3dshape/` — Hunyuan3D shape utilities from [Tencent-Hunyuan/Hunyuan3D-2.1/hy3dshape](https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/tree/main/hy3dshape).
 
 ---
 
@@ -103,14 +108,15 @@ NeAR inherits many dependencies from TRELLIS and additionally uses relighting-re
 Use the provided setup script as a starting point:
 
 ```bash
-cd /root/code/3diclight/NeAR
+git clone --recursive https://github.com/Luh1124/NeAR.git
+cd NeAR
 . ./setup.sh --help
 ```
 
 A typical TRELLIS-style setup may look like:
 
 ```bash
-. ./setup.sh --new-env --basic --xformers --flash-attn --diffoctreerast --spconv --mipgaussian --kaolin --nvdiffrast
+. ./setup.sh --new-env --basic --xformers --flash-attn --diffoctreerast --spconv --kaolin --nvdiffrast --hy3d --gsplat
 ```
 
 Depending on your environment, you may still need to manually install extra packages used by NeAR, for example:
@@ -119,7 +125,24 @@ Depending on your environment, you may still need to manually install extra pack
 pip install pyexr simple-ocio open3d rembg imageio easydict
 ```
 
-If you use Hunyuan3D geometry generation, make sure the `hy3dshape` dependencies are also installed.
+<!-- If you use Hunyuan3D geometry generation, make sure the `hy3dshape` dependencies are also installed. The `hy3dshape` module is sourced from [Tencent-Hunyuan/Hunyuan3D-2.1/hy3dshape](https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/tree/main/hy3dshape). -->
+
+### Viser viewer (optional)
+
+For an interactive neural relighting window (orbit camera, HDRI rotation, low-res while dragging):
+
+```bash
+pip install "viser>=1.0.0"   # or: . ./setup.sh --demo
+python app_viser.py --slat path/to/slat.npz --hdri path/to/env.exr --port 8080
+```
+
+By default the viewer **letterboxes** the square neural render into the browser viewport so the subject is not stretched on wide windows. Use `--no-letterbox` to restore the old full-viewport stretch.
+
+Neural rendering uses perspective **clip planes** (`--clip-near` / `--clip-far`, defaults `0.05` / `32`). The old pipeline default `far=3` only matched orbit radius ~2; pulling the camera out (larger radius) needs a larger far plane or the object disappears.
+
+For a **public link** (experimental), use `--share` and/or the GUI button **Get share URL (tunnel)**; this calls viser’s `request_share_url()` and may require outbound network access. For production sharing, prefer your own reverse proxy, SSH tunnel, or a tunneling tool.
+
+The pipeline exposes `render_relight_color_numpy(hs, rfs, hdri_cond, ...)` for cached decoder / lighting tokens. See `python app_viser.py --help`.
 
 ---
 
@@ -143,31 +166,16 @@ The geometry model is currently run separately in `example.py` via:
 
 ---
 
-## Inference Modes
+## Inference
 
-NeAR currently supports two practical inference modes.
+NeAR supports two inference paths:
 
-### 1. From image to relightable result
+1. **Image → relightable result** — preprocess image → generate geometry (Hunyuan3D) → predict SLAT → render under target HDRI.
+2. **Existing SLaT → relightable result** — skip geometry/latent generation, render directly from a saved `.npz`.
 
-Pipeline:
+For detailed instructions, command-line examples, output descriptions, and API usage, see [**doc/infer.md**](doc/infer.md).
 
-1. preprocess the image,
-2. generate geometry using Hunyuan3D,
-3. convert geometry to sparse coordinates,
-4. predict SLAT from the image and geometry,
-5. render under a target HDRI.
-
-### 2. From existing SLaT to relightable result
-
-If you already have a saved `.npz` SLaT file, NeAR can skip geometry and latent generation, and directly render under a target HDRI.
-
----
-
-## Minimal Example
-
-The main entry point is `example.py`.
-
-### Single-image relighting
+Quick start:
 
 ```bash
 python example.py \
@@ -175,140 +183,6 @@ python example.py \
   --hdri assets/hdris/studio_small_03_1k.exr \
   --out_dir relight_out
 ```
-
-### Rotate the environment light
-
-```bash
-python example.py \
-  --image assets/example_image/T.png \
-  --hdri assets/hdris/studio_small_03_1k.exr \
-  --hdri_rot 90 \
-  --out_dir relight_out
-```
-
-### Render from an existing SLaT
-
-```bash
-python example.py \
-  --slat /path/to/sample_slat.npz \
-  --hdri assets/hdris/studio_small_03_1k.exr \
-  --out_dir relight_out
-```
-
-### Generate camera-path and HDRI-rotation videos
-
-```bash
-python example.py \
-  --image assets/example_image/T.png \
-  --hdri assets/hdris/studio_small_03_1k.exr \
-  --video_frames 40 \
-  --out_dir relight_out
-```
-
----
-
-## Example Outputs
-
-Running `example.py` typically produces:
-
-- `relight_out/initial_3d_shape.glb` — geometry generated by Hunyuan3D
-- `relight_out/relight_color.png` — relit color result
-- `relight_out/base_color.png` — estimated base color
-- `relight_out/metallic.png` — metallic map visualization
-- `relight_out/roughness.png` — roughness map visualization
-- `relight_out/shadow.png` — shadow map visualization
-- `relight_out/relight_camera_path.mp4` — novel-view relighting video
-- `relight_out/hdri_roll.mp4` — rotating HDRI preview
-- `relight_out/relight_hdri_rotation.mp4` — fixed-view relighting under rotating HDRI
-
-If `--save_slat` is specified, the inferred SLaT will also be saved as an `.npz` file.
-
----
-
-## Important Notes
-
-### 1. Geometry is run outside the main NeAR pipeline
-
-To avoid coupling geometry inference too tightly with the relighting pipeline, the current codebase runs **Hunyuan3D separately in `example.py`**, then passes the generated mesh into:
-
-- `pipeline.run_with_shape(...)`
-
-This design keeps the relighting pipeline cleaner and makes geometry easier to swap out.
-
-### 2. HDRI rotation
-
-`--hdri_rot` in `example.py` controls the **static rotation angle** for regular rendering.
-
-For continuous environment rotation, `example.py` also calls:
-
-- `pipeline.render_hdri_rotation_video(...)`
-
-which returns both:
-
-- rotated HDRI preview frames, and
-- rendered relighting frames.
-
-### 3. Full video rendering
-
-Some video modes concatenate multiple outputs side by side:
-
-- color
-- base color
-- metallic
-- roughness
-- shadow
-
-This is useful for debugging and qualitative comparison, but increases video width and storage size.
-
-### 4. Resolution and rendering options
-
-The renderer is configured inside the pipeline via:
-
-- `setup_renderer(...)`
-- `render_view(...)`
-- `render_camera_path_video(...)`
-- `render_hdri_rotation_video(...)`
-
-You can adjust:
-
-- output resolution,
-- camera FOV,
-- camera radius,
-- background color,
-- HDRI rotation,
-- video frame count.
-
----
-
-## Core API
-
-Main NeAR pipeline methods include:
-
-- `preprocess_image(image)`
-- `run_with_shape(image, mesh, ...)`
-- `run_with_coords(image_list, coords, ...)`
-- `load_slat(path)`
-- `load_hdri(path)`
-- `render_view(...)`
-- `render_camera_path_video(...)`
-- `render_hdri_rotation_video(...)`
-- `export_glb_from_slat(...)`
-
----
-
-## Typical Workflow
-
-A practical workflow is:
-
-1. start from an image,
-2. generate geometry with Hunyuan3D,
-3. infer SLaT with `run_with_shape`,
-4. save the SLaT,
-5. reuse the SLaT for different HDRIs, different HDRI rotations, and different camera paths.
-
-This avoids recomputing geometry and latent generation every time you want to test a new lighting setup.
-
----
 
 ## Related Projects
 

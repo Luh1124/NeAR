@@ -67,7 +67,7 @@ if [ "$HELP" = true ] ; then
     echo "  --gsplat                Install gsplat"
     echo "  --kaolin                Install kaolin"
     echo "  --nvdiffrast            Install nvdiffrast"
-    echo "  --demo                  Install all dependencies for demo"
+    echo "  --demo                  Install all dependencies for demo (gradio, viser, ...)"
     echo "  --hy3d                  Install hy3dshape"
     # echo "  --u3d                   Install UltraShape-1.0"
     return
@@ -258,7 +258,7 @@ if [ "$SPCONV" = true ] ; then
 fi
 
 if [ "$DEMO" = true ] ; then
-    pip install gradio==6.9.0 simple_ocio
+    pip install gradio==6.9.0 simple_ocio "viser>=1.0.0"
 fi
 
 if [ "$HY3D" = true ] ; then

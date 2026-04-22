@@ -417,3 +417,5 @@ UltraShape-1.0/
 tmp_gradio/
 
 */__pycache__/
+
+dist/

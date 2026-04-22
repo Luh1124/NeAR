@@ -431,6 +431,65 @@ class NeARImageToRelightable3DPipeline(Pipeline):
         }
 
     @torch.no_grad()
+    def render_relight_color_numpy(
+        self,
+        hs: SparseTensor,
+        rfs: torch.Tensor,
+        hdri_cond: torch.Tensor,
+        yaw_deg: float,
+        pitch_deg: float,
+        fov_deg: float = 40.0,
+        radius: float = 2.0,
+        internal_resolution: int = 512,
+        bg_color: Tuple[float, float, float] = (1.0, 1.0, 1.0),
+        clip_near: float = 0.05,
+        clip_far: float = 32.0,
+    ) -> np.ndarray:
+        """Neural relighting: RGB uint8 (H, W, 3) composited over a solid background.
+
+        Expects cached ``hs``, ``rfs`` from ``decoder_pbr_feats`` and ``hdri_cond`` from
+        ``encode_hdri`` so interactive viewers can skip decoder / HDRI encoder each frame.
+
+        ``clip_near`` / ``clip_far`` are the gsplat perspective clip planes in view space.
+        Cameras use ``extrinsics_look_at`` at distance ``radius`` from the origin, so scene
+        depths are on the order of ``radius``. The legacy defaults ``near=1, far=3`` only fit
+        ``radius`` around ~2; larger orbit radii need a larger ``clip_far`` or the object
+        disappears past the far plane.
+        """
+        res_i = int(internal_resolution)
+        cache_key = (res_i, tuple(bg_color), float(clip_near), float(clip_far))
+        if getattr(self, "_relight_render_key", None) != cache_key:
+            self.setup_renderer(
+                resolution=res_i,
+                near=clip_near,
+                far=clip_far,
+                bg_color=bg_color,
+                ssaa=1,
+            )
+            self._relight_render_key = cache_key
+
+        extr, intr = self.generate_camera(yaw_deg, pitch_deg, radius, fov_deg)
+        reps = self.get_reps(hs, rfs, hdri_cond, extr[None, ...])
+        res = None
+        for rep in reps:
+            res = self.renderer.render(
+                rep,
+                extr,
+                intr,
+                opt=edict(neural_basis=self.models["neural_basis"]),
+            )
+            break
+        if res is None:
+            raise RuntimeError("render_relight_color_numpy: empty reps")
+
+        alpha = res["alpha_view"].detach().cpu().numpy().transpose(1, 2, 0)
+        pred = res["color"].detach().cpu().numpy().transpose(1, 2, 0)
+        pred = self.tone_mapper.hdr_to_ldr(pred)
+        bg = np.array(bg_color, dtype=np.float32).reshape(1, 1, 3)
+        frame = pred * alpha + (1.0 - alpha) * bg
+        return (np.clip(frame, 0.0, 1.0) * 255.0).astype(np.uint8)
+
+    @torch.no_grad()
     def render_camera_path_video(
         self,
         slat: SparseTensor,
