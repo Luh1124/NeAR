@@ -16,6 +16,8 @@ __attributes = {
     'SLat': 'structured_latent',
     'TextConditionedSLat': 'structured_latent',
     'ImageConditionedSLat': 'structured_latent',
+    'SLatI2E': 'structured_latent',
+    'SLatI2ETar': 'structured_latent_tar',
 }
 
 __submodules = []
@@ -58,5 +60,11 @@ if __name__ == '__main__':
         SLat,
         TextConditionedSLat,
         ImageConditionedSLat,
+    )
+    from .structured_latent import (
+        SLatI2E,
+    )
+    from .structured_latent_tar import (
+        SLatI2ETar,
     )
     

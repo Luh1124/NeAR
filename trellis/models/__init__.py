@@ -24,8 +24,6 @@ __attributes = {
     'SLatFlowModel': 'structured_latent_flow',
     'ElasticSLatFlowModel': 'structured_latent_flow',
 
-    'SLatFlowS2EModelLoRA': 'structured_latent_flow_s2e',
-    'ElasticSLatFlowS2ELORAModel': 'structured_latent_flow_s2e',
 
 }
 
@@ -118,7 +116,3 @@ if __name__ == '__main__':
         ElasticSLatFlowModel,
     )
 
-    from .structured_latent_flow_s2e import (
-        SLatFlowS2EModelLoRA,
-        ElasticSLatFlowS2ELORAModel,
-    )

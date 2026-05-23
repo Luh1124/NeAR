@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterator, List, Literal, Optional, Tuple, Union, C
 
 import cv2
 import numpy as np
+import OpenEXR
 import open3d as o3d
 import pyexr
 import rembg
@@ -341,8 +342,14 @@ class NeARImageToRelightable3DPipeline(Pipeline):
         return sp.SparseTensor(feats, coords).to(self.device)
 
     def load_hdri(self, hdri_path: str) -> np.ndarray:
-        """Load an EXR HDRI file as a float array with shape `(H, W, 3)`."""
-        return pyexr.read(hdri_path)[..., :3]
+        """Load an HDRI file (EXR or Radiance HDR) as a float32 array with shape `(H, W, 3)`."""
+        if OpenEXR.isOpenExrFile(hdri_path):
+            return pyexr.read(hdri_path)[..., :3]
+        # Fallback: Radiance HDR (.hdr) or other formats supported by OpenCV
+        img = cv2.imread(hdri_path, cv2.IMREAD_ANYDEPTH | cv2.IMREAD_COLOR)
+        if img is None:
+            raise ValueError(f"Cannot load HDRI file '{hdri_path}'. Only EXR and Radiance HDR formats are supported.")
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB).astype(np.float32)
 
     def generate_camera(
         self,

@@ -41,7 +41,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DEFAULT_IMAGE = APP_DIR / "assets/example_image/T.png"
 DEFAULT_SLAT = APP_DIR / "assets/example_slats/2a0d671ce308adb93323eae7141953fc1a5ba68f38cc69f476d5e904c634864d.npz"
 DEFAULT_HDRI = APP_DIR / "assets/hdris/studio_small_03_1k.exr"
-DEFAULT_PORT = 7860
+DEFAULT_PORT = 7812
 MAX_SEED = np.iinfo(np.int32).max
 
 
@@ -974,4 +974,5 @@ if __name__ == "__main__":
         server_name=args.host,
         server_port=args.port,
         share=args.share,
+        tmp_dir=str(CACHE_DIR),
     )

@@ -9,6 +9,7 @@
   <a href="https://near-project.github.io/"><img src="https://img.shields.io/badge/Project_Page-Website-2ea44f?logo=googlechrome&logoColor" alt="Project Page"></a>
   <a href="https://huggingface.co/luh0502/NeAR/tree/main"><img src="https://img.shields.io/badge/HuggingFace-Weights-f9d949?logo=huggingface&logoColor" alt="Checkpoints"></a>
   <a href="https://huggingface.co/spaces/luh0502/NeAR"><img src="https://img.shields.io/badge/HuggingFace-Demo-f9d949?logo=huggingface&logoColor" alt="Demo"></a>
+  <a href="https://www.modelscope.cn/datasets/luh0502/NeAR-dataset"><img src="https://img.shields.io/badge/ModelScope-Dataset-624aff?logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgdmlld0JveD0iMCAwIDEyOCAxMjgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTY0IDEyTDExMCAzOC42djUyLjhMNjQgMTE4IDE4IDkxLjRWMzguNkw2NCAxMloiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNNjQgMzAuNkwzNC4xIDQ3Ljl2MzQuMkw2NCA5OS40bDI5LjktMTcuM1Y0Ny45TDY0IDMwLjZaIiBmaWxsPSIjNjI0YWZmIi8+PHBhdGggZD0iTTY0IDQ2LjJMNDcuNiA1NS43djE4LjZMNjQgODMuOGwxNi40LTkuNVY1NS43TDY0IDQ2LjJaIiBmaWxsPSIjZmZmIi8+PC9zdmc+" alt="ModelScope Dataset"></a>
 </div>
 
 **NeAR** is a relightable 3D generation and rendering project built on top of **TRELLIS-style Structured Latents (SLAT)** and a lighting-aware neural renderer. Given a casually lit input image, NeAR estimates relightable neural assets and renders them under novel environment lighting and viewpoints.
@@ -145,11 +146,10 @@ The geometry model is currently run separately in `example.py` via:
 
 - `tencent/Hunyuan3D-2.1`
 
-### Stage-1 Data
+### Data
 
-The first-stage training data is available on Hugging Face:
-
-- [luh0502/NeAR](https://huggingface.co/datasets/luh0502/NeAR) — stage-1 dataset
+- [luh0502/NeAR](https://huggingface.co/datasets/luh0502/NeAR) — stage-1 dataset on HuggingFace
+- [luh0502/NeAR-dataset](https://www.modelscope.cn/datasets/luh0502/NeAR-dataset) — stage-2 dataset on ModelScope
 
 ### HDR Environment Maps
 
@@ -189,11 +189,9 @@ This repository builds on and adapts ideas, codebases, and problem settings from
 - [MeshGen](https://heheyas.github.io/MeshGen/) — PBR textured mesh generation
 - [RGB↔X](https://zheng95z.github.io/publications/rgbx24) — material- and lighting-aware decomposition and synthesis
 
-We thank the authors of these projects for releasing their papers, code, models, and project pages. If you use this repository, please also check the licenses and terms of the upstream dependencies and models.
-
 ## BibTeX
 
-If you find this project useful, please consider citing our paper:
+If you find this project or data useful, please consider citing our paper:
 
 ```bibtex
 @inproceedings{li2025near,
