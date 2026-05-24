@@ -59,6 +59,14 @@ The following videos are produced by the local NeAR example pipeline and are use
 
 <!-- If these local videos are not present, you can generate them with `example.py` and `--video_frames > 0`. -->
 
+## Texture Style Transfer
+
+Different reference images can be used for **mesh** and **SLaT** in the Gradio app — the mesh is locked to one image's geometry while the SLaT inherits the appearance of another, producing texture style transfer onto the same shape.
+
+<div align="center">
+  <img src="assets/style/style.gif" alt="NeAR texture style transfer" width="100%" />
+</div>
+
 ---
 
 ## Overview
@@ -84,7 +92,7 @@ Key files and directories:
 - `example.py` — minimal end-to-end inference example.
 - `app_e.py` — Gradio-style demo / app script.
 - `app_viser.py` — interactive neural relight viewer ([viser](https://github.com/viser-project/viser)); orbit camera + HDRI controls, full-viewport relit RGB (no GLB).
-- `setup.sh` — environment setup helper.
+- `pixi.toml` — reproducible environment definition (conda + PyPI, CUDA toolchain).
 - `checkpoints/` — local pipeline configuration and model checkpoints.
 - `trellis/pipelines/near_image_to_relightable_3d.py` — main NeAR inference pipeline.
 - `trellis/utils/render_utils_rl.py` — relighting rendering utilities.
@@ -97,38 +105,44 @@ Key files and directories:
 
 ### Requirements
 
-- Linux
-- NVIDIA GPU
-- Python 3.10+ recommended
-- CUDA-compatible PyTorch environment
+- Linux (tested on Ubuntu with glibc ≥ 2.35)
+- NVIDIA GPU with CUDA 12.x compatible driver (Ampere / Hopper recommended; arch list `8.0;8.6;9.0`)
+- [pixi](https://pixi.sh/) ≥ 0.40 — `curl -fsSL https://pixi.sh/install.sh | bash`
 
-NeAR inherits many dependencies from TRELLIS and additionally uses relighting-related packages such as `pyexr`, `simple_ocio`, `open3d`, and the local `hy3dshape` module.
+The environment uses **Python 3.10**, **PyTorch 2.11.0+cu128**, and **xformers 0.0.35**. All Python / conda dependencies (CUDA toolkit, compilers, system libs) are declared in `pixi.toml`; you do not need a system-wide CUDA install or `conda`.
 
 ### Setup
-
-Use the provided setup script as a starting point:
 
 ```bash
 git clone --recursive https://github.com/Luh1124/NeAR.git
 cd NeAR
-. ./setup.sh --help
+
+# 1. Resolve & install python, CUDA toolkit, torch, xformers, and all pure-python deps.
+pixi install
+
+# 2. (Optional) Stage Hunyuan3D-2.1's hy3dshape/ at the repo root for geometry generation.
+pixi run fetch-hy3dshape
+
+# 3. Build CUDA / torch-extension deps that need torch present at compile time:
+#      flash-attn, gsplat, vox2seq (local), diffoctreerast, hy3dshape requirements.
+pixi run setup-cuda-ext
 ```
 
-A typical TRELLIS-style setup may look like:
+That's the whole install. Everything below assumes you prefix commands with `pixi run` (or use `pixi shell` for an interactive session):
 
 ```bash
-. ./setup.sh --new-env --basic --xformers --flash-attn --diffoctreerast --spconv --kaolin --nvdiffrast --hy3d --gsplat
+pixi run python example.py --image assets/example_image/T.png \
+                           --hdri  assets/hdris/studio_small_03_1k.exr
 ```
 
-Depending on your environment, you may still need to manually install extra packages used by NeAR, for example:
+### Notes on the environment
 
-```bash
-pip install pyexr simple-ocio open3d rembg imageio easydict
-```
+- **Cache placement** — `pixi.toml` sets `UV_CACHE_DIR=$PIXI_PROJECT_ROOT/.pixi/uv-cache` so the PyPI cache lives on the same filesystem as `.pixi/envs/`. This lets uv hardlink wheels into the env and avoids cross-mount copy fallbacks.
+- **Switching torch versions** — every CUDA extension (`nvdiffrast`, `flash-attn`, `vox2seq`, `diffoctreerast`, `gsplat`) is compiled against a specific torch ABI. CUDA extensions are installed via `pixi run setup-cuda-ext` with `--no-cache-dir --force-reinstall`, so re-running the task after a torch pin change rebuilds them against the new ABI.
+- **kaolin** — NVIDIA only publishes wheels up to torch 2.8.0_cu128, so kaolin is *not* installed in this env. No main-path NeAR code imports kaolin (only unused `flexicubes/examples/` demos do). If you need it, build from source.
+- **HIP / ROCm** — not currently supported by the pixi env.
 
-<!-- If you use Hunyuan3D geometry generation, make sure the `hy3dshape` dependencies are also installed. The `hy3dshape` module is sourced from [Tencent-Hunyuan/Hunyuan3D-2.1/hy3dshape](https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1/tree/main/hy3dshape). -->
-
-
+### Pipeline configuration
 
 The local pipeline configuration is defined in:
 
@@ -171,7 +185,7 @@ For detailed instructions, command-line examples, output descriptions, and API u
 Quick start:
 
 ```bash
-python example.py \
+pixi run python example.py \
   --image assets/example_image/T.png \
   --hdri assets/hdris/studio_small_03_1k.exr \
   --out_dir relight_out

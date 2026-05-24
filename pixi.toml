@@ -1,0 +1,133 @@
+# vim: expandtab shiftwidth=2 softtabstop=2 tabstop=2
+#
+# Pixi environment for NeAR. torch 2.11.0+cu128 — aligned with near_trellis2
+# so SLAT / checkpoints can flow between the two repos without ABI mismatch.
+#
+# First-time setup:
+#   pixi install                 # python/CUDA/torch + pure-python deps
+#   pixi run fetch-hy3dshape     # one-time: stage hy3dshape/ from Hunyuan3D-2.1
+#   pixi run setup-cuda-ext      # build torch-ABI extensions against the env
+
+[workspace]
+authors = ["Hongli <link0502@buaa.edu.cn>"]
+channels = ["conda-forge"]
+name = "near"
+platforms = ["linux-64"]
+version = "0.0.1"
+
+[system-requirements]
+libc = { family = "glibc", version = "2.35" }
+
+[activation.env]
+TRITON_PTXAS_PATH = "$PIXI_PROJECT_ROOT/.pixi/envs/default/bin/ptxas"
+LD_LIBRARY_PATH = "$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+CUDA_HOME = "$CONDA_PREFIX"
+TORCH_CUDA_ARCH_LIST = "8.0;8.6;9.0"
+ATTN_BACKEND = "xformers"
+SPCONV_ALGO = "native"
+# conda-forge's cuda-toolkit puts cuda_runtime.h under targets/x86_64-linux/
+# instead of $CONDA_PREFIX/include. PyTorch cpp_extension JIT only adds the
+# latter, so .cpp files in gsplat / similar fail with "cuda_runtime.h not
+# found". CPATH exposes the headers to the host C++ compiler.
+CPATH = "$CONDA_PREFIX/targets/x86_64-linux/include:$CPATH"
+# Default ~/.cache/uv is typically on a different mount than .pixi/envs/,
+# which prevents hardlinks and forces silent full-copy fallback.
+UV_CACHE_DIR = "$PIXI_PROJECT_ROOT/.pixi/uv-cache"
+
+[dependencies]
+python = "3.10.*"
+pip = "*"
+uv = "*"
+ninja = "*"
+cmake = "*"
+cuda-toolkit = "12.8.*"
+nvidia-ml-py = "*"
+libstdcxx-ng = ">=14"
+# torch 2.11.0+cu128 needs setuptools<82; conda otherwise ships 82.x.
+setuptools = "<82"
+# Required by flash-attn / gsplat source-build fallbacks.
+psutil = "*"
+# nvcc 12.8 needs host g++ < 14.
+gcc_linux-64 = "13.*"
+gxx_linux-64 = "13.*"
+
+# Torch-ABI extensions (nvdiffrast, flash-attn, vox2seq, diffoctreerast,
+# gsplat) live in `setup-cuda-ext`, NOT here: uv caches built wheels by
+# source ref alone and won't rebuild them on a torch bump, which silently
+# produces ABI-mismatch ImportErrors at runtime.
+
+[pypi-dependencies]
+# Torch + xformers (cu128 wheels for torch 2.11)
+torch = { version = "==2.11.0", index = "https://download.pytorch.org/whl/cu128" }
+torchvision = { version = "==0.26.0", index = "https://download.pytorch.org/whl/cu128" }
+xformers = { version = "==0.0.35", index = "https://download.pytorch.org/whl/cu128" }
+
+# Image / mesh / IO
+pillow = "*"
+imageio = "*"
+imageio-ffmpeg = "*"
+tqdm = "*"
+easydict = "*"
+opencv-python-headless = "*"
+scipy = "*"
+rembg = "*"
+onnxruntime = "*"
+trimesh = "*"
+open3d = "*"
+xatlas = "*"
+pyvista = "*"
+pymeshfix = "*"
+igraph = "*"
+transformers = "==4.57.6"
+pyexr = "*"
+OpenEXR = "*"
+# hy3dshape's moe_layers imports timm but its requirements.txt omits it.
+timm = "*"
+# BiRefNet rembg (RMBG-2.0) downloads a remote module that imports kornia.
+kornia = "*"
+utils3d = { git = "https://github.com/EasternJournalist/utils3d.git", rev = "9a4eb15e4021b67b12c460c7057d642626897ec8" }
+
+# Training
+tensorboard = "*"
+pandas = "*"
+lpips = "*"
+
+# Sparse 3D convolution
+spconv-cu120 = "*"
+
+# Demo
+gradio = "==6.9.0"
+simple_ocio = "*"
+viser = ">=1.0.0"
+
+# Pixi tasks run under deno_task_shell — newlines become `&&` and
+# `if/then/else/fi` is unsupported, so we use `test ... && ... || (...)`.
+
+[tasks.fetch-hy3dshape]
+description = "Clone Hunyuan3D-2.1 and stage its hy3dshape/ at the repo root."
+cmd = "test -d hy3dshape && echo '[fetch-hy3dshape] hy3dshape/ already present, skipping.' || (rm -rf /tmp/_hy3d-src && git clone --depth 1 https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1.git /tmp/_hy3d-src && cp -r /tmp/_hy3d-src/hy3dshape ./hy3dshape && rm -rf /tmp/_hy3d-src && echo '[fetch-hy3dshape] hy3dshape/ staged.')"
+
+[tasks.clean-cache]
+description = "Wipe tmp_gradio/ (app session files). Safe to run when the app is not active."
+cmd = "rm -rf tmp_gradio && mkdir -p tmp_gradio && echo '[clean-cache] tmp_gradio/ wiped.'"
+
+# Each install on its own line so one failure doesn't nuke the batch.
+# `--no-cache-dir --force-reinstall` on torch-extension builds forces a
+# fresh compile after a torch bump (otherwise uv reuses an old-ABI wheel).
+#
+# flash-attn 2.8.3: Dao-AILab never published a torch-2.11 wheel; we pull
+# from the lesj0610 fork, same wheel near_trellis2 uses.
+#
+# kaolin is intentionally not installed: NVIDIA's wheel index stops at
+# torch 2.8.0_cu128 and no NeAR main-path code imports it (only the unused
+# flexicubes/examples/ demos do).
+[tasks.setup-cuda-ext]
+description = "Build NeAR's torch-extension deps against the env's torch."
+cmd = """
+uv pip install --no-cache-dir --no-build-isolation https://github.com/lesj0610/flash-attention/releases/download/v2.8.3-cu12-torch2.11/flash_attn-2.8.3+cu12torch2.11cxx11abiTRUE-cp310-cp310-linux_x86_64.whl
+uv pip install --no-cache-dir gsplat
+uv pip install --no-cache-dir --no-build-isolation --force-reinstall git+https://github.com/NVlabs/nvdiffrast.git
+uv pip install --no-cache-dir --no-build-isolation --force-reinstall -e ./extensions/vox2seq
+uv pip install --no-cache-dir --no-build-isolation --force-reinstall git+https://github.com/JeffreyXiang/diffoctreerast.git
+test -d hy3dshape && uv pip install -r hy3dshape/requirements.txt || echo '[setup-cuda-ext] hy3dshape/ not present — run `pixi run fetch-hy3dshape` first if you need it.'
+"""

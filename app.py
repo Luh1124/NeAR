@@ -1,8 +1,25 @@
 import os
 import sys
 import shutil
+import time
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+# Point Gradio's per-session cache at a stable in-repo dir. Set BEFORE
+# `import gradio` so gradio's internal utils pick it up at module load.
+# Gradio 6.0 dropped `Blocks.launch(tmp_dir=...)`; `GRADIO_TEMP_DIR` is the
+# canonical replacement.
+APP_DIR = Path(__file__).resolve().parent
+CACHE_DIR = APP_DIR / "tmp_gradio"
+# Wipe the previous run's session files so the tree doesn't grow unboundedly
+# across restarts. Active-session pruning is handled by gradio's `delete_cache`
+# on the Blocks below.
+if CACHE_DIR.exists():
+    _n = sum(1 for _ in CACHE_DIR.rglob("*") if _.is_file())
+    shutil.rmtree(CACHE_DIR, ignore_errors=True)
+    print(f"[startup] purged {_n} stale file(s) from {CACHE_DIR}")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("GRADIO_TEMP_DIR", str(CACHE_DIR))
 
 import gradio as gr
 import imageio
@@ -33,10 +50,6 @@ os.environ.setdefault("TORCH_CUDA_ARCH_LIST", "9.0") # H series GPUs require thi
 from trellis.pipelines import NeARImageToRelightable3DPipeline
 from hy3dshape.pipelines import Hunyuan3DDiTFlowMatchingPipeline  # pyright: ignore[reportMissingImports]
 
-
-APP_DIR = Path(__file__).resolve().parent
-CACHE_DIR = APP_DIR / "tmp_gradio"
-CACHE_DIR.mkdir(exist_ok=True)
 
 DEFAULT_IMAGE = APP_DIR / "assets/example_image/T.png"
 DEFAULT_SLAT = APP_DIR / "assets/example_slats/2a0d671ce308adb93323eae7141953fc1a5ba68f38cc69f476d5e904c634864d.npz"
@@ -113,7 +126,30 @@ def preview_hdri(hdri_file_obj: Any, tone_mapper_name: str):
 
 
 def switch_asset_source(mode: str):
-    return gr.Tabs(selected=1 if mode == "From Existing SLaT" else 0)
+    """
+    Switching mode is a fresh start: reset asset_state, clear the SLaT/image
+    inputs, and blank out stale render outputs. Otherwise the previous mode's
+    asset_state.slat_path leaks across, and the user sees old videos that
+    look like they came from the new SLaT.
+    """
+    is_existing = mode == "From Existing SLaT"
+    return (
+        gr.Tabs(selected=1 if is_existing else 0),
+        {},     # asset_state
+        None,   # slat_upload
+        "",     # slat_path_text
+        None,   # mesh_viewer
+        None,   # pbr_viewer
+        None,   # color_output
+        None,   # base_color_output
+        None,   # metallic_output
+        None,   # roughness_output
+        None,   # shadow_output
+        None,   # camera_video_output
+        None,   # hdri_roll_video_output
+        None,   # hdri_render_video_output
+        "Switched mode — state reset. Re-run the workflow.",  # status_md
+    )
 
 
 def _ensure_rgba(img: Image.Image) -> Image.Image:
@@ -232,7 +268,10 @@ def generate_slat(
 
 
 def load_slat_file(slat_upload: Any, slat_path_text: str, req: gr.Request):
-    resolved = get_file_path(slat_upload) or (slat_path_text.strip() if slat_path_text else "")
+    # Prefer the text path: `gr.Examples` populates this field, but the
+    # Upload widget can hold a stale file from an earlier interaction.
+    text = (slat_path_text or "").strip()
+    resolved = text or get_file_path(slat_upload) or ""
     if not resolved:
         raise gr.Error("Please provide a SLaT `.npz` path or upload one.")
     if not os.path.exists(resolved):
@@ -341,7 +380,12 @@ def render_camera_video(
         hdri_rot_deg=hdri_rot, full_video=full_video, shadow_video=shadow_video,
         bg_color=(1, 1, 1), verbose=True,
     )
-    video_path = session_dir / ("camera_path_full.mp4" if full_video else "camera_path.mp4")
+    # Unique filename per call: gradio's gr.Video doesn't refresh when the
+    # returned path string is identical to the previous one, even if the
+    # underlying file content changed (browser caches by URL).
+    stamp = time.time_ns()
+    kind = "camera_path_full" if full_video else "camera_path"
+    video_path = session_dir / f"{kind}_{stamp}.mp4"
     imageio.mimsave(video_path, frames, fps=int(fps))
     return str(video_path), f"**Camera path video saved**"
 
@@ -373,8 +417,10 @@ def render_hdri_video(
         fov=fov, radius=radius, full_video=full_video, shadow_video=shadow_video,
         bg_color=(1, 1, 1), verbose=True,
     )
-    hdri_roll_path = session_dir / "hdri_roll.mp4"
-    render_path = session_dir / ("hdri_rotation_full.mp4" if full_video else "hdri_rotation.mp4")
+    stamp = time.time_ns()
+    hdri_roll_path = session_dir / f"hdri_roll_{stamp}.mp4"
+    render_kind = "hdri_rotation_full" if full_video else "hdri_rotation"
+    render_path = session_dir / f"{render_kind}_{stamp}.mp4"
     imageio.mimsave(hdri_roll_path, hdri_roll_frames, fps=int(fps))
     imageio.mimsave(render_path, render_frames, fps=int(fps))
     return str(hdri_roll_path), str(render_path), "**HDRI rotation video saved**"
@@ -401,7 +447,7 @@ def export_glb(
         hdri_rot_deg=hdri_rot, base_mesh=None,
         simplify=simplify, texture_size=int(texture_size), fill_holes=True,
     )
-    glb_path = session_dir / "near_pbr.glb"
+    glb_path = session_dir / f"near_pbr_{time.time_ns()}.glb"
     glb.export(glb_path)
     return str(glb_path), f"PBR GLB exported: **{glb_path.name}**"
 
@@ -634,14 +680,17 @@ footer { display:none !important; }
 # UI
 # ---------------------------------------------------------------------------
 def build_app() -> gr.Blocks:
+    # Gradio 6.0 moved `theme` and `css` out of the Blocks constructor — they
+    # are passed to `launch()` further down instead.
+    #
+    # `delete_cache=(sweep_every, max_age)`: every `sweep_every` seconds,
+    # delete files older than `max_age`. The previous (600, 600) deleted
+    # uploaded images after 10 min — long-running interactions then hit
+    # FileNotFoundError when the UI re-referenced the purged path. Widen
+    # to (1800, 3600) so files survive a typical session.
     with gr.Blocks(
-        theme=gr.themes.Base(
-            primary_hue=gr.themes.colors.blue,
-            secondary_hue=gr.themes.colors.blue,
-        ),
         title="NeAR",
-        css=CUSTOM_CSS,
-        delete_cache=(600, 600),
+        delete_cache=(1800, 3600),
         fill_width=True,
     ) as demo:
         asset_state = gr.State({})
@@ -863,7 +912,27 @@ def build_app() -> gr.Blocks:
         if DEFAULT_IMAGE.exists():
             demo.load(preprocess_default_image, outputs=[image_input])
 
-        source_mode.change(switch_asset_source, inputs=[source_mode], outputs=[source_tabs])
+        source_mode.change(
+            switch_asset_source,
+            inputs=[source_mode],
+            outputs=[
+                source_tabs,
+                asset_state,
+                slat_upload,
+                slat_path_text,
+                mesh_viewer,
+                pbr_viewer,
+                color_output,
+                base_color_output,
+                metallic_output,
+                roughness_output,
+                shadow_output,
+                camera_video_output,
+                hdri_roll_video_output,
+                hdri_render_video_output,
+                status_md,
+            ],
+        )
         source_mode.change(
             lambda m: (
                 gr.update(visible=m == "From Image"),
@@ -974,5 +1043,9 @@ if __name__ == "__main__":
         server_name=args.host,
         server_port=args.port,
         share=args.share,
-        tmp_dir=str(CACHE_DIR),
+        theme=gr.themes.Base(
+            primary_hue=gr.themes.colors.blue,
+            secondary_hue=gr.themes.colors.blue,
+        ),
+        css=CUSTOM_CSS,
     )

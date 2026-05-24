@@ -419,3 +419,7 @@ tmp_gradio/
 */__pycache__/
 
 dist/
+
+# CUDA extension build artifacts (vox2seq etc., rebuilt by `pixi run setup-cuda-ext`)
+extensions/**/*.so
+extensions/**/build/
