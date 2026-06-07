@@ -196,28 +196,24 @@ pixi run python example.py \
 
 ## Interactive FastAPI Web Application
 
-We provide a modern, feature-rich, high-performance web viewer built with **FastAPI** and **WebSockets** that supports real-time rendering, material editing, dual-image generation, and integrated super-resolution upscaling.
+We provide an interactive web app built with **FastAPI** and **WebSockets** for real-time 3DGS relighting and asset generation.
 
 ### Key Features
-- **Fluid HTML5 Canvas Orbit Control**: High-frequency WebSocket communication streams mouse interaction states (yaw, pitch, radius, FOV, HDRI rotation) to the PyTorch/gsplat neural backend, sending back lossless PNG frames for a highly responsive viewport.
-- **Dual-Image Style Transfer Mode**: Generates 3D models using **Geometry Image** (defining the 3D shape) and **Style Image** (defining the color and textures). You can quickly select inputs from a beautifully structured example gallery of local presets.
-- **Real-time 4x Super-Resolution (DSCF-SR)**: Integrates the ultra-fast, lightweight **DSCF-SR** model. Enabling this features runs the internal neural rendering at $1/4$ resolution and instantly upscales the output by 4x. This delivers ultra-smooth interaction frame rates ($>60$ FPS) with stunning lossless-quality visuals.
-- **Interactive PBR GLB Inspector**: Powered by Google `<model-viewer>` CDN, users can visualize, orbit, relight, and download fully baked PBR GLB models directly from the web client with adjustable mesh simplification and texture sizes.
-- **Secure Basic Authentication**: Secure your GPU resources by configuring basic credentials when exposing the service publicly.
+- **Real-time Orbit Relighting**: High-frequency WebSocket streaming with HTML5 Canvas viewport.
+- **Dual-Image Style Transfer**: Generate 3D geometry from one image and relightable texture (SLaT) from another.
+- **Real-time 4x Super-Resolution**: Integrates an ultra-fast **DSCF-SR** model to upscale low-res rendering interactively.
+- **PBR GLB Export**: Visualize, relight, simplify, and download fully baked PBR GLB models.
+- **Auth Security**: Supports Basic Authentication for public deployment.
 
 ### Running the Web App
-
-To launch the web application, run:
 
 ```bash
 pixi run python app_web.py --port 8099 --share --username admin --password near666
 ```
 
-Parameters:
-- `--host`: Host to bind (default: `0.0.0.0`).
-- `--port`: Port to listen on (default: `8080`).
-- `--share`: Establishes a secure public Gradio tunnel for sharing the web link.
-- `--username` / `--password`: Optional basic credentials to secure your web service.
+- `--host` / `--port`: Server bind options (default: `0.0.0.0:8080`).
+- `--share`: Create a secure public tunnel.
+- `--username` / `--password`: Optional credentials for basic authentication.
 
 ---
 
