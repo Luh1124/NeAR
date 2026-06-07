@@ -431,3 +431,7 @@ extensions/**/build/
 wheels
 
 *.hdr
+
+# Ignore test and debug scripts
+test_*.py
+debug_*.py

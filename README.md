@@ -90,8 +90,9 @@ Compared with a standard image-to-3D pipeline, NeAR focuses on:
 Key files and directories:
 
 - `example.py` — minimal end-to-end inference example.
-- `app_e.py` — Gradio-style demo / app script.
-- `app_viser.py` — interactive neural relight viewer ([viser](https://github.com/viser-project/viser)); orbit camera + HDRI controls, full-viewport relit RGB (no GLB).
+- `app_web.py` — launcher for the modern, high-performance **FastAPI & WebSocket Neural Relighting Web App** (replaces old Gradio/Viser viewers).
+- `app_web/` — FastAPI backend and interactive HTML5 Canvas frontend implementation.
+- `DSCF-SR/` — integrated lightweight 4x spatial-frequency distillation super-resolution network model.
 - `pixi.toml` — reproducible environment definition (conda + PyPI, CUDA toolchain).
 - `checkpoints/` — local pipeline configuration and model checkpoints.
 - `trellis/pipelines/near_image_to_relightable_3d.py` — main NeAR inference pipeline.
@@ -190,6 +191,35 @@ pixi run python example.py \
   --hdri assets/hdris/studio_small_03_1k.exr \
   --out_dir relight_out
 ```
+
+---
+
+## Interactive FastAPI Web Application
+
+We provide a modern, feature-rich, high-performance web viewer built with **FastAPI** and **WebSockets** that supports real-time rendering, material editing, dual-image generation, and integrated super-resolution upscaling.
+
+### Key Features
+- **Fluid HTML5 Canvas Orbit Control**: High-frequency WebSocket communication streams mouse interaction states (yaw, pitch, radius, FOV, HDRI rotation) to the PyTorch/gsplat neural backend, sending back lossless PNG frames for a highly responsive viewport.
+- **Dual-Image Style Transfer Mode**: Generates 3D models using **Geometry Image** (defining the 3D shape) and **Style Image** (defining the color and textures). You can quickly select inputs from a beautifully structured example gallery of local presets.
+- **Real-time 4x Super-Resolution (DSCF-SR)**: Integrates the ultra-fast, lightweight **DSCF-SR** model. Enabling this features runs the internal neural rendering at $1/4$ resolution and instantly upscales the output by 4x. This delivers ultra-smooth interaction frame rates ($>60$ FPS) with stunning lossless-quality visuals.
+- **Interactive PBR GLB Inspector**: Powered by Google `<model-viewer>` CDN, users can visualize, orbit, relight, and download fully baked PBR GLB models directly from the web client with adjustable mesh simplification and texture sizes.
+- **Secure Basic Authentication**: Secure your GPU resources by configuring basic credentials when exposing the service publicly.
+
+### Running the Web App
+
+To launch the web application, run:
+
+```bash
+pixi run python app_web.py --port 8099 --share --username admin --password near666
+```
+
+Parameters:
+- `--host`: Host to bind (default: `0.0.0.0`).
+- `--port`: Port to listen on (default: `8080`).
+- `--share`: Establishes a secure public Gradio tunnel for sharing the web link.
+- `--username` / `--password`: Optional basic credentials to secure your web service.
+
+---
 
 ## Acknowledgements
 
