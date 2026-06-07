@@ -198,17 +198,10 @@ pixi run python example.py \
 
 We provide an interactive web app built with **FastAPI** and **WebSockets** for real-time 3DGS relighting and asset generation.
 
-### Key Features
-- **Real-time Orbit Relighting**: High-frequency WebSocket streaming with HTML5 Canvas viewport.
-- **Dual-Image Style Transfer**: Generate 3D geometry from one image and relightable texture (SLaT) from another.
-- **Real-time 4x Super-Resolution**: Integrates an ultra-fast **DSCF-SR** model to upscale low-res rendering interactively.
-- **PBR GLB Export**: Visualize, relight, simplify, and download fully baked PBR GLB models.
-- **Auth Security**: Supports Basic Authentication for public deployment.
-
 ### Running the Web App
 
 ```bash
-pixi run python app_web.py --port 8099 --share --username admin --password near666
+pixi run python app_web.py --port 8099 --share --username <your-username> --password <your-password>
 ```
 
 - `--host` / `--port`: Server bind options (default: `0.0.0.0:8080`).
