@@ -99,6 +99,8 @@ spconv-cu120 = "*"
 gradio = "==6.9.0"
 simple_ocio = "*"
 viser = ">=1.0.0"
+fastapi = "*"
+uvicorn = "*"
 
 # Pixi tasks run under deno_task_shell — newlines become `&&` and
 # `if/then/else/fi` is unsupported, so we use `test ... && ... || (...)`.
@@ -108,8 +110,8 @@ description = "Clone Hunyuan3D-2.1 and stage its hy3dshape/ at the repo root."
 cmd = "test -d hy3dshape && echo '[fetch-hy3dshape] hy3dshape/ already present, skipping.' || (rm -rf /tmp/_hy3d-src && git clone --depth 1 https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1.git /tmp/_hy3d-src && cp -r /tmp/_hy3d-src/hy3dshape ./hy3dshape && rm -rf /tmp/_hy3d-src && echo '[fetch-hy3dshape] hy3dshape/ staged.')"
 
 [tasks.clean-cache]
-description = "Wipe tmp_gradio/ (app session files). Safe to run when the app is not active."
-cmd = "rm -rf tmp_gradio && mkdir -p tmp_gradio && echo '[clean-cache] tmp_gradio/ wiped.'"
+description = "Wipe tmp_gradio/ and tmp_web_app/ (app session files). Safe to run when the app is not active."
+cmd = "rm -rf tmp_gradio && rm -rf tmp_web_app && mkdir -p tmp_gradio && mkdir -p tmp_web_app && echo '[clean-cache] Caches wiped.'"
 
 # Each install on its own line so one failure doesn't nuke the batch.
 # `--no-cache-dir --force-reinstall` on torch-extension builds forces a

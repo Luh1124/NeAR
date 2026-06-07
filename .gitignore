@@ -416,6 +416,10 @@ UltraShape-1.0/
 
 tmp_gradio/
 
+tmp_web_app/
+
+tmp_sr_test/
+
 */__pycache__/
 
 dist/
@@ -425,3 +429,5 @@ extensions/**/*.so
 extensions/**/build/
 
 wheels
+
+*.hdr

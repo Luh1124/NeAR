@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeAR Standalone GLB Viewer & Debugger</title>
+    <!-- Model Viewer for GLB interactive visualization (using jsDelivr CDN) -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0c0c0e;
+            --panel-bg: rgba(20, 20, 25, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #98989d;
+            --accent: #007aff;
+            --accent-hover: #0051ba;
+            --success: #30d158;
+            --error: #ff453a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 350px;
+            background: rgba(15, 15, 20, 0.95);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .glb-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .glb-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+            word-break: break-all;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .glb-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .glb-item.active {
+            background: rgba(0, 122, 255, 0.1);
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .refresh-btn {
+            padding: 10px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.85rem;
+            margin-bottom: 24px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        #viewer-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            background: #050507;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #glbViewer {
+            width: 80%;
+            height: 80%;
+            max-width: 800px;
+            max-height: 800px;
+            aspect-ratio: 1;
+            border: 1.5px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+            background-color: #000000;
+            display: block;
+        }
+
+        #log-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            height: 150px;
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            overflow-y: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.75rem;
+            color: #30d158;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 100;
+        }
+
+        .log-entry {
+            line-height: 1.4;
+        }
+
+        .log-error {
+            color: var(--error);
+        }
+
+        .log-info {
+            color: #007aff;
+        }
+
+        .back-link {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: auto;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text-primary);
+        }
+
+        #no-models-msg {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 24px;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Listing -->
+    <div id="sidebar">
+        <h1>NeAR GLB Debugger</h1>
+        <div class="subtitle">Select and inspect exported PBR meshes</div>
+
+        <button class="refresh-btn" onclick="fetchGlbList()">🔄 Refresh GLB List</button>
+
+        <div class="section-title">Available Models</div>
+        <div id="no-models-msg" style="display: none;">No GLB models found in tmp_web_app. Try exporting one from the main app first.</div>
+        <ul class="glb-list" id="glbList">
+            <!-- Dynamically populated -->
+        </ul>
+
+        <a href="/" class="back-link">← Back to Main App</a>
+    </div>
+
+    <!-- Main Viewport and console panel -->
+    <div id="viewer-container">
+        <!-- 3D Viewer -->
+        <model-viewer id="glbViewer" 
+                      src="" 
+                      camera-controls 
+                      autoplay 
+                      shadow-intensity="1" 
+                      exposure="1.2"
+                      environment-image="legacy"
+                      ar-modes="webxr scene-viewer quick-look">
+        </model-viewer>
+
+        <!-- Debug logs embedded into the UI -->
+        <div id="log-panel">
+            <div class="log-entry log-info">[System] Debug panel initialized. Console events will stream here.</div>
+        </div>
+    </div>
+
+    <script>
+        // Log redirector to show console.log / error on screen
+        const logPanel = document.getElementById('log-panel');
+        function addLog(message, type = 'success') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type === 'error' ? 'log-error' : (type === 'info' ? 'log-info' : '')}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Hook console errors
+        const _error = console.error;
+        console.error = function(...args) {
+            _error.apply(console, args);
+            addLog(args.join(' '), 'error');
+        };
+
+        const _log = console.log;
+        console.log = function(...args) {
+            _log.apply(console, args);
+            addLog(args.join(' '), 'info');
+        };
+
+        // Hook model-viewer specific events
+        const glbViewer = document.getElementById('glbViewer');
+
+        glbViewer.addEventListener('load', (e) => {
+            addLog(`✅ GLB Model loaded successfully! URL: ${glbViewer.src}`);
+        });
+
+        glbViewer.addEventListener('error', (e) => {
+            addLog(`❌ Model-Viewer Error: ${e.detail.type || 'Unknown error during load/parse'}`, 'error');
+            console.error('Full Error Event:', e);
+        });
+
+        glbViewer.addEventListener('progress', (e) => {
+            if (e.detail.totalProgress === 1) {
+                addLog(`⏳ File downloaded, parsing mesh...`);
+            }
+        });
+
+        async function fetchGlbList() {
+            addLog("Scanning tmp_web_app directory for GLB models...", 'info');
+            try {
+                const response = await fetch('/api/list_glbs');
+                const data = await response.json();
+                
+                const list = document.getElementById('glbList');
+                list.innerHTML = '';
+                
+                if (!data.glbs || data.glbs.length === 0) {
+                    document.getElementById('no-models-msg').style.display = 'block';
+                    addLog("No GLB models found on server cache.", 'error');
+                    return;
+                }
+                
+                document.getElementById('no-models-msg').style.display = 'none';
+                data.glbs.forEach(glb => {
+                    const li = document.createElement('li');
+                    li.className = 'glb-item';
+                    li.textContent = glb.name;
+                    li.onclick = () => {
+                        document.querySelectorAll('.glb-item').forEach(item => item.classList.remove('active'));
+                        li.classList.add('active');
+                        loadModel(glb.url);
+                    };
+                    list.appendChild(li);
+                });
+                
+                addLog(`Found ${data.glbs.length} GLB model(s).`);
+            } catch (err) {
+                addLog(`Failed to scan GLBs: ${err.message}`, 'error');
+            }
+        }
+
+        function loadModel(url) {
+            addLog(`Requesting GLB loading from URL: ${url}`, 'info');
+            
+            // Set source
+            glbViewer.src = url;
+        }
+
+        // Initial scan
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchGlbList();
+        });
+    </script>
+</body>
+</html>

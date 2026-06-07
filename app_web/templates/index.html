@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NeAR Relighting & Generation Suite</title>
+    <!-- Model Viewer for GLB interactive visualization -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0c0c0e;
+            --panel-bg: rgba(20, 20, 25, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #98989d;
+            --accent: #007aff;
+            --accent-hover: #0051ba;
+            --success: #30d158;
+            --error: #ff453a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar & Tabs Layout */
+        #sidebar {
+            width: 380px; /* Expanded sidebar width for better layout space */
+            height: 100vh;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            box-shadow: 8px 0 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .sidebar-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .sidebar-tab-btn {
+            flex: 1;
+            padding: 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .sidebar-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .sidebar-tab-btn.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        /* Generation Mode Sub-tabs */
+        .sub-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 3px;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .sub-tab-btn {
+            flex: 1;
+            padding: 8px 12px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sub-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .sub-tab-btn.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Main Viewport Layout */
+        #viewportContainer {
+            flex: 1;
+            height: 100vh;
+            position: relative;
+            background-color: #050507;
+        }
+
+        .viewport-tabs {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 8px;
+            z-index: 20;
+            background: rgba(20, 20, 25, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .viewport-tab-btn {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .viewport-tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .viewport-tab-btn.active {
+            background: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .viewport-panel {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+
+        .viewport-panel.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #renderCanvas {
+            max-width: 60%;
+            max-height: 60%;
+            aspect-ratio: 1;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+            background-color: #000000;
+            display: block;
+        }
+
+        #glbViewer {
+            width: 60%;
+            height: 60%;
+            max-width: 60vw;
+            max-height: 60vh;
+            aspect-ratio: 1;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+            background-color: #000000;
+            display: block;
+        }
+
+        /* UI Elements & Typography */
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .control-value {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            outline: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        select:hover, input[type="number"]:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Image Upload Zone */
+        #uploadZone, #uploadZoneGeo, #uploadZoneStyle {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 32px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            min-height: 180px;
+        }
+
+        #uploadZone:hover, #uploadZone.dragover,
+        #uploadZoneGeo:hover, #uploadZoneGeo.dragover,
+        #uploadZoneStyle:hover, #uploadZoneStyle.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        #uploadPreview, #uploadPreviewGeo, #uploadPreviewStyle {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .upload-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Action Buttons */
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Progress Bar */
+        #progressContainer {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: var(--accent);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        /* Video Container */
+        #videoContainer {
+            display: none;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        #outputVideo {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: black;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-family: monospace;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--error);
+            margin-right: 6px;
+        }
+
+        .status-dot.connected {
+            background-color: var(--success);
+        }
+
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 25, 0.75);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            white-space: nowrap;
+        }
+
+        /* Notification Toast */
+        #notification {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 69, 58, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: slideIn 0.3s ease;
+        }
+
+        /* Example Gallery Styles */
+        .example-gallery-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .example-gallery-list {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 8px 2px;
+            max-width: 100%;
+        }
+
+        .example-gallery-list::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .example-gallery-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+        }
+
+        .example-thumb {
+            width: 56px;
+            height: 56px;
+            border-radius: 6px;
+            border: 1.5px solid var(--border-color);
+            cursor: pointer;
+            object-fit: cover;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .example-thumb:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .example-thumb.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 8px rgba(0, 122, 255, 0.4);
+        }
+
+        @keyframes slideIn {
+            from { transform: translate(-50%, -20px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="notification"></div>
+
+    <!-- Left Sidebar -->
+    <div id="sidebar">
+        <!-- Sidebar Navigation Tabs -->
+        <div class="sidebar-tabs">
+            <button class="sidebar-tab-btn active" onclick="switchSidebarTab('generate')">Generate 3D</button>
+            <button class="sidebar-tab-btn" onclick="switchSidebarTab('interactive')">Interactive</button>
+        </div>
+
+        <!-- Sidebar Content Area -->
+        <div class="sidebar-content">
+            <!-- 1. GENERATION TAB PANEL -->
+            <div id="tabPanelGenerate" style="display: flex; flex-direction: column; gap: 24px;">
+                <div>
+                    <h2>3D Generation</h2>
+                    <div class="subtitle">Hunyuan3D & NeAR Relight Suite</div>
+                </div>
+
+                <!-- Mode Selector Sub-tabs -->
+                <div class="sub-tabs">
+                    <button class="sub-tab-btn active" id="modeBtnStandard" onclick="switchGenerationMode('standard')">Standard</button>
+                    <button class="sub-tab-btn" id="modeBtnStyle" onclick="switchGenerationMode('style_transfer')">Style Transfer</button>
+                </div>
+
+                <!-- Mode 1: Standard Section -->
+                <div id="modeSectionStandard" style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Image Upload Zone -->
+                    <div class="control-group">
+                        <div class="section-title">1. Upload Image</div>
+                        <div id="uploadZone" onclick="triggerFileInput()">
+                            <div class="upload-icon">📸</div>
+                            <div class="upload-text">Click or drag image here</div>
+                            <img id="uploadPreview" src="" alt="Upload Preview">
+                        </div>
+                        <input type="file" id="fileInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+                    </div>
+
+                    <!-- Example Gallery -->
+                    <div class="example-gallery-container" id="exampleGalleryContainer" style="display: none;">
+                        <div class="section-title">Or Select Example</div>
+                        <div class="example-gallery-list" id="exampleGalleryList">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 2: Style Transfer Section -->
+                <div id="modeSectionStyle" style="display: none; flex-direction: column; gap: 20px;">
+                    <!-- Geometry Upload Zone -->
+                    <div class="control-group">
+                        <div class="section-title">1. Upload Geometry Image (3D Shape)</div>
+                        <div id="uploadZoneGeo" onclick="triggerGeoFileInput()">
+                            <div class="upload-icon">📐</div>
+                            <div class="upload-text">Shape/Geometry Image</div>
+                            <img id="uploadPreviewGeo" src="" alt="Geo Upload Preview">
+                        </div>
+                        <input type="file" id="fileInputGeo" accept="image/*" style="display: none;" onchange="handleGeoFileSelect(event)">
+                    </div>
+
+                    <!-- Geo Example Gallery -->
+                    <div class="example-gallery-container" id="exampleGalleryContainerGeo" style="display: none;">
+                        <div class="section-title">Or Select Geometry Example</div>
+                        <div class="example-gallery-list" id="exampleGalleryListGeo">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Style Upload Zone -->
+                    <div class="control-group">
+                        <div class="section-title">2. Upload Style Image (Color & Texture)</div>
+                        <div id="uploadZoneStyle" onclick="triggerStyleFileInput()">
+                            <div class="upload-icon">🎨</div>
+                            <div class="upload-text">Color/Style Image</div>
+                            <img id="uploadPreviewStyle" src="" alt="Style Upload Preview">
+                        </div>
+                        <input type="file" id="fileInputStyle" accept="image/*" style="display: none;" onchange="handleStyleFileSelect(event)">
+                    </div>
+
+                    <!-- Style Example Gallery -->
+                    <div class="example-gallery-container" id="exampleGalleryContainerStyle" style="display: none;">
+                        <div class="section-title">Or Select Style Example</div>
+                        <div class="example-gallery-list" id="exampleGalleryListStyle">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generation Controls -->
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Random Seed</span>
+                    </div>
+                    <input type="number" id="generationSeed" value="42" min="0">
+                </div>
+
+                <button class="btn btn-primary" id="generateBtn" onclick="executeGeneration()" disabled>
+                    ⚡ Generate 3D Asset
+                </button>
+
+                <!-- Step Progress Bar -->
+                <div id="progressContainer">
+                    <div class="progress-header">
+                        <span id="progressMessage">Initializing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressBarFill"></div>
+                    </div>
+                </div>
+
+                <!-- Rendered 360 Video Player -->
+                <div id="videoContainer" style="display: none; flex-direction: column; gap: 16px;">
+                    <div>
+                        <div class="section-title" style="margin-bottom: 8px;">360 Camera Path Video</div>
+                        <video id="outputVideo" src="" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: black;" controls autoplay loop muted></video>
+                    </div>
+                    <div>
+                        <div class="section-title" style="margin-bottom: 8px;">HDRI Rotation Video (Shadows Enabled)</div>
+                        <video id="hdriOutputVideo" src="" style="width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: black;" controls autoplay loop muted></video>
+                    </div>
+                </div>
+
+                <!-- GLB Export Panel -->
+                <div id="glbExportPanel" style="display: none; flex-direction: column; gap: 16px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                    <div>
+                        <h2>Export Textured Mesh</h2>
+                        <div class="subtitle">Bake PBR materials into GLB</div>
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Mesh Simplify Ratio</span>
+                            <span class="control-value" id="simplifyVal">0.9</span>
+                        </div>
+                        <input type="range" id="simplifyRatio" min="0.1" max="1.0" step="0.05" value="0.9" oninput="document.getElementById('simplifyVal').textContent=this.value">
+                    </div>
+
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Texture Resolution</span>
+                        </div>
+                        <select id="textureSize">
+                            <option value="512">512 px</option>
+                            <option value="1024" selected>1024 px</option>
+                            <option value="2048">2048 px</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-secondary" id="exportGlbBtn" onclick="exportGLB()">
+                        📦 Export PBR GLB
+                    </button>
+
+                    <a id="downloadGlbLink" class="btn btn-primary" style="display: none; text-decoration: none;" download>
+                        💾 Download GLB Mesh
+                    </a>
+                </div>
+            </div>
+
+            <!-- 2. INTERACTIVE TAB PANEL -->
+            <div id="tabPanelInteractive" style="display: none; flex-direction: column; gap: 24px;">
+                <div>
+                    <h2>Scene Controls</h2>
+                    <div class="subtitle">Real-time Neural Relighting</div>
+                </div>
+
+                <div class="control-group">
+                    <div class="section-title">Asset Selection</div>
+                    <div class="control-label">
+                        <span>3D Model (SLaT)</span>
+                    </div>
+                    <select id="slatSelect" onchange="triggerRender(false)">
+                        <option value="">Loading models...</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Lighting (HDRI)</span>
+                    </div>
+                    <select id="hdriSelect" onchange="triggerRender(false)">
+                        <option value="">Loading HDRIs...</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="section-title">Environment</div>
+                    <div class="control-label">
+                        <span>HDRI Rotation</span>
+                        <span class="control-value" id="hdriRotVal">0°</span>
+                    </div>
+                    <input type="range" id="hdriRot" min="0" max="360" value="0" oninput="document.getElementById('hdriRotVal').textContent=this.value+'°'; triggerRender(false)">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Tone Mapper</span>
+                    </div>
+                    <select id="toneMapper" onchange="triggerRender(false)">
+                        <option value="AgX">AgX</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <div class="section-title">Performance & Interaction</div>
+                    <div class="control-label">
+                        <span>Drag Resolution</span>
+                        <span class="control-value" id="dragResVal">256px</span>
+                    </div>
+                    <input type="range" id="dragRes" min="64" max="512" step="32" value="256" oninput="document.getElementById('dragResVal').textContent=this.value+'px'">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Idle Resolution</span>
+                        <span class="control-value" id="idleResVal">1024px</span>
+                    </div>
+                    <input type="range" id="idleRes" min="512" max="2048" step="128" value="1024" oninput="document.getElementById('idleResVal').textContent=this.value+'px'; triggerRender(false)">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">
+                        <span>Orbit Sensitivity</span>
+                        <span class="control-value" id="sensitivityVal">0.6</span>
+                    </div>
+                    <input type="range" id="orbitSensitivity" min="0.1" max="2.0" step="0.05" value="0.6" oninput="document.getElementById('sensitivityVal').textContent=this.value; sensitivity=parseFloat(this.value);">
+                </div>
+
+                <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; padding-top: 4px;">
+                    <span style="font-size: 0.85rem; font-weight: 500;">Real-time AI Super-Resolution (4x DSCF-SR)</span>
+                    <input type="checkbox" id="srCheckbox" checked style="width: 18px; height: 18px; cursor: pointer;" onchange="triggerRender(false)">
+                </div>
+
+                <div class="control-group" style="flex-direction: row; align-items: center; justify-content: space-between; padding-top: 4px;">
+                    <span style="font-size: 0.85rem; font-weight: 500;">Show 3D Coordinate Axes</span>
+                    <input type="checkbox" id="showAxesCheckbox" checked style="width: 18px; height: 18px; cursor: pointer;" onchange="triggerRender(false)">
+                </div>
+
+                <div class="stats-panel">
+                    <div class="section-title" style="margin-bottom: 8px; border: none; padding: 0;">Status & Stats</div>
+                    <div class="stat-row">
+                        <span class="stat-label">Pipeline Mode</span>
+                        <span class="stat-value" id="pipelineModeVal" style="color: var(--success); font-weight: 500;">Standard</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Connection</span>
+                        <span class="stat-value" id="connStatus"><span class="status-dot" id="statusDot"></span>Disconnected</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Render State</span>
+                        <span class="stat-value" id="renderState" style="color: var(--text-secondary);">Idle</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">FPS</span>
+                        <span class="stat-value" id="fpsVal">0.0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="stat-label">Latency</span>
+                        <span class="stat-value" id="latencyVal">0ms</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Viewport Area -->
+    <div id="viewportContainer">
+        <!-- Viewport Navigation Tabs -->
+        <div class="viewport-tabs">
+            <button class="viewport-tab-btn active" id="viewTab3dgs" onclick="switchViewportTab('3dgs')">Interactive 3DGS</button>
+            <button class="viewport-tab-btn" id="viewTabGlb" onclick="switchViewportTab('glb')" disabled>Interactive Mesh (GLB)</button>
+        </div>
+
+        <!-- Tab 1: Interactive Relighting (3DGS Canvas) -->
+        <div class="viewport-panel active" id="panel3dgs">
+            <canvas id="renderCanvas"></canvas>
+            <div id="instructions">
+                🖱️ Left-drag to rotate | 📜 Scroll to zoom | 📱 Pinch to zoom (mobile)
+            </div>
+        </div>
+
+        <!-- Tab 2: Interactive Mesh (GLB Model Viewer) -->
+        <div class="viewport-panel" id="panelGlb">
+            <model-viewer id="glbViewer" src="" camera-controls autoplay shadow-intensity="1" exposure="1.2" environment-image="neutral"></model-viewer>
+        </div>
+    </div>
+
+    <script>
+        // UI State Variables
+        let activeSidebarTab = 'generate';
+        let activeViewportTab = '3dgs';
+        let uploadedImageRelPath = null;
+        let generatedSlatPath = null;
+
+        // Style Transfer State
+        let activeGenerationMode = 'standard'; // 'standard' or 'style_transfer'
+        let uploadedGeoRelPath = null;
+        let uploadedStyleRelPath = null;
+        let geoFileObject = null;
+        let styleFileObject = null;
+
+        // Camera Orbit State
+        let yaw = 0.0;
+        let pitch = 0.0;
+        let radius = 2.0;
+        let fov = 40.0;
+
+        // Interaction State
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let touchStartDist = 0;
+        let sensitivity = 0.6; // Higher default sensitivity (previously 0.3)
+
+        // WebSocket & Throttling
+        let ws = null;
+        let lastSendTime = 0;
+        let throttleTimeout = null;
+        let debounceTimeout = null;
+        const THROTTLE_MS = 100;
+        const DEBOUNCE_MS = 400;
+
+        // Stats
+        let lastFrameTime = 0;
+        let requestTimes = {};
+        let nextRequestId = 0;
+        let fpsHistory = [];
+
+        // Canvas Setup
+        const canvas = document.getElementById('renderCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            // Read container size to fit within the flex viewport box (scaled to max-width: 60%, max-height: 60% of parent relative container)
+            const parentWidth = window.innerWidth - (document.getElementById('sidebar').offsetWidth || 380);
+            const parentHeight = window.innerHeight;
+            
+            // Set drawing buffer resolution based on 50% of parent dimensions
+            canvas.width = Math.round(parentWidth * 0.6);
+            canvas.height = Math.round(parentWidth * 0.6); // Let's keep a square 1:1 aspect ratio
+            
+            triggerRender(false);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        // Delay slightly to ensure layout is complete
+        setTimeout(resizeCanvas, 100);
+
+        // Sidebar Tab Switcher
+        function switchSidebarTab(tabId) {
+            activeSidebarTab = tabId;
+            document.querySelectorAll('.sidebar-tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent.toLowerCase().includes(tabId));
+            });
+            document.getElementById('tabPanelGenerate').style.display = tabId === 'generate' ? 'flex' : 'none';
+            document.getElementById('tabPanelInteractive').style.display = tabId === 'interactive' ? 'flex' : 'none';
+        }
+
+        // Viewport Tab Switcher
+        function switchViewportTab(tabId) {
+            activeViewportTab = tabId;
+            document.getElementById('viewTab3dgs').classList.toggle('active', tabId === '3dgs');
+            document.getElementById('viewTabGlb').classList.toggle('active', tabId === 'glb');
+            document.getElementById('panel3dgs').classList.toggle('active', tabId === '3dgs');
+            document.getElementById('panelGlb').classList.toggle('active', tabId === 'glb');
+            
+            if (tabId === '3dgs') {
+                document.getElementById('instructions').style.display = 'block';
+                resizeCanvas();
+            } else {
+                document.getElementById('instructions').style.display = 'none';
+            }
+        }
+
+        // Toast Notification
+        function showToast(message, isError = true) {
+            const toast = document.getElementById('notification');
+            toast.textContent = message;
+            toast.style.background = isError ? 'rgba(255, 69, 58, 0.95)' : 'rgba(48, 209, 88, 0.95)';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 4000);
+        }
+
+        // Trigger Hidden File Input
+        function triggerFileInput() {
+            document.getElementById('fileInput').click();
+        }
+
+        // Helper to upload a File object and set up generator state
+        async function uploadFileDirect(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                document.getElementById('generateBtn').disabled = true;
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    uploadedImageRelPath = result.image_path;
+                    updateGenerateButtonState();
+                    showToast("Image loaded successfully!", false);
+                } else {
+                    showToast("Failed to process image: " + result.message);
+                }
+            } catch (err) {
+                showToast("Upload failed: " + err.message);
+            }
+        }
+
+        // Handle File Select & Upload
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Clear example selection
+            document.querySelectorAll('.example-thumb').forEach(el => el.classList.remove('active'));
+
+            // Show local preview instantly
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('uploadPreview');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            await uploadFileDirect(file);
+        }
+
+        // Select and load an example image from the assets/example_image folder
+        async function selectExampleImage(url, element) {
+            // Highlight selected thumb
+            document.querySelectorAll('#exampleGalleryList .example-thumb').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            // Show preview instantly
+            const preview = document.getElementById('uploadPreview');
+            preview.src = '/' + url;
+            preview.style.display = 'block';
+
+            // Convert example image to Blob and upload to start a clean session
+            try {
+                document.getElementById('generateBtn').disabled = true;
+                showToast("Loading example image...", false);
+                
+                const response = await fetch('/' + url);
+                const blob = await response.blob();
+                const filename = url.split('/').pop();
+                const file = new File([blob], filename, { type: blob.type });
+                
+                await uploadFileDirect(file);
+            } catch (err) {
+                showToast("Failed to load example: " + err.message);
+            }
+        }
+
+        // Select and load an example image for geometry (Style Transfer Mode)
+        async function selectExampleImageGeo(url, element) {
+            // Highlight selected geo thumb
+            document.querySelectorAll('#exampleGalleryListGeo .example-thumb').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            // Show preview instantly
+            const preview = document.getElementById('uploadPreviewGeo');
+            preview.src = '/' + url;
+            preview.style.display = 'block';
+
+            try {
+                showToast("Loading geometry example...", false);
+                const response = await fetch('/' + url);
+                const blob = await response.blob();
+                const filename = url.split('/').pop();
+                const file = new File([blob], filename, { type: blob.type });
+                
+                geoFileObject = file;
+                updateGenerateButtonState();
+            } catch (err) {
+                showToast("Failed to load geometry example: " + err.message);
+            }
+        }
+
+        // Select and load an example image for style (Style Transfer Mode)
+        async function selectExampleImageStyle(url, element) {
+            // Highlight selected style thumb
+            document.querySelectorAll('#exampleGalleryListStyle .example-thumb').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            // Show preview instantly
+            const preview = document.getElementById('uploadPreviewStyle');
+            preview.src = '/' + url;
+            preview.style.display = 'block';
+
+            try {
+                showToast("Loading style example...", false);
+                const response = await fetch('/' + url);
+                const blob = await response.blob();
+                const filename = url.split('/').pop();
+                const file = new File([blob], filename, { type: blob.type });
+                
+                styleFileObject = file;
+                updateGenerateButtonState();
+            } catch (err) {
+                showToast("Failed to load style example: " + err.message);
+            }
+        }
+
+        // Dynamically map server paths to static web assets
+        function getWebUrlFromPath(serverPath) {
+            if (!serverPath) return "";
+            const assetsIndex = serverPath.indexOf("assets/");
+            if (assetsIndex !== -1) {
+                return "/" + serverPath.substring(assetsIndex);
+            }
+            const tmpIndex = serverPath.indexOf("tmp_web_app/");
+            if (tmpIndex !== -1) {
+                return "/" + serverPath.substring(tmpIndex);
+            }
+            return serverPath;
+        }
+
+        // Update environment light on model-viewer dynamically
+        function updateModelViewerEnvironment(serverPath) {
+            const glbViewer = document.getElementById('glbViewer');
+            if (glbViewer) {
+                let webUrl = getWebUrlFromPath(serverPath);
+                if (webUrl) {
+                    if (webUrl.endsWith('.exr')) {
+                        // Dynamically substitute EXR with the converted HDR format for high-dynamic-range WebGL rendering
+                        webUrl = webUrl.slice(0, -4) + '.hdr';
+                    }
+                    if (glbViewer.getAttribute('environment-image') !== webUrl) {
+                        glbViewer.setAttribute('environment-image', webUrl);
+                        // Explicitly remove skybox-image attribute to keep the viewer rendering background pitch black,
+                        // while maintaining the beautiful, high-dynamic realistic lighting reflections and shading on the mesh!
+                        glbViewer.removeAttribute('skybox-image');
+                    }
+                }
+            }
+        }
+
+        // Switch Generation Mode (Standard vs Style Transfer)
+        function switchGenerationMode(mode) {
+            activeGenerationMode = mode;
+            document.getElementById('modeBtnStandard').classList.toggle('active', mode === 'standard');
+            document.getElementById('modeBtnStyle').classList.toggle('active', mode === 'style_transfer');
+            document.getElementById('modeSectionStandard').style.display = mode === 'standard' ? 'flex' : 'none';
+            document.getElementById('modeSectionStyle').style.display = mode === 'style_transfer' ? 'flex' : 'none';
+
+            // Re-evaluate if generate button should be enabled
+            updateGenerateButtonState();
+        }
+
+        // Update state of generation button based on loaded files
+        function updateGenerateButtonState() {
+            const btn = document.getElementById('generateBtn');
+            if (activeGenerationMode === 'standard') {
+                btn.disabled = !uploadedImageRelPath;
+            } else {
+                btn.disabled = !(geoFileObject && styleFileObject);
+            }
+        }
+
+        // Trigger Hidden File Inputs for Style Transfer
+        function triggerGeoFileInput() {
+            document.getElementById('fileInputGeo').click();
+        }
+
+        function triggerStyleFileInput() {
+            document.getElementById('fileInputStyle').click();
+        }
+
+        // Handlers for Style Transfer file selection
+        function handleGeoFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            geoFileObject = file;
+
+            // Show local preview instantly
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('uploadPreviewGeo');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            updateGenerateButtonState();
+        }
+
+        function handleStyleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            styleFileObject = file;
+
+            // Show local preview instantly
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const preview = document.getElementById('uploadPreviewStyle');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            updateGenerateButtonState();
+        }
+
+        // Execute Generation based on mode
+        async function executeGeneration() {
+            if (activeGenerationMode === 'standard') {
+                startGeneration();
+            } else {
+                await startStyleTransfer();
+            }
+        }
+
+        // Start 3D Generation Pipeline (Standard Mode)
+        function startGeneration() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !uploadedImageRelPath) return;
+
+            // Reset UI
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'flex';
+            document.getElementById('progressBarFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressMessage').textContent = 'Starting generation...';
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('glbExportPanel').style.display = 'none';
+
+            // Update active pipeline display
+            const modeVal = document.getElementById('pipelineModeVal');
+            if (modeVal) {
+                modeVal.textContent = 'Standard';
+                modeVal.style.color = 'var(--success)';
+            }
+
+            const payload = {
+                type: 'generate',
+                image_path: uploadedImageRelPath,
+                seed: parseInt(document.getElementById('generationSeed').value)
+            };
+            ws.send(JSON.stringify(payload));
+        }
+
+        // Start Style Transfer Pipeline (Dual-Image Mode)
+        async function startStyleTransfer() {
+            if (!ws || ws.readyState !== WebSocket.OPEN || !geoFileObject || !styleFileObject) return;
+
+            // Reset UI and show uploading state
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'flex';
+            document.getElementById('progressBarFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressMessage').textContent = 'Uploading Style Transfer assets...';
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('glbExportPanel').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('geo_file', geoFileObject);
+            formData.append('style_file', styleFileObject);
+
+            try {
+                const response = await fetch('/upload_style_transfer', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    document.getElementById('progressMessage').textContent = 'Starting Style Transfer...';
+                    
+                    const payload = {
+                        type: 'generate_style_transfer',
+                        geo_image_path: result.geo_image_path,
+                        style_image_path: result.style_image_path,
+                        seed: parseInt(document.getElementById('generationSeed').value)
+                    };
+                    ws.send(JSON.stringify(payload));
+                    
+                    // Update active pipeline display
+                    const modeVal = document.getElementById('pipelineModeVal');
+                    if (modeVal) {
+                        modeVal.textContent = 'Style Transfer';
+                        modeVal.style.color = '#ff9500'; // Orange for Style Transfer
+                    }
+                } else {
+                    document.getElementById('generateBtn').disabled = false;
+                    document.getElementById('progressContainer').style.display = 'none';
+                    showToast("Upload failed: " + result.message);
+                }
+            } catch (err) {
+                document.getElementById('generateBtn').disabled = false;
+                document.getElementById('progressContainer').style.display = 'none';
+                showToast("Upload failed: " + err.message);
+            }
+        }
+
+        // Export GLB Mesh
+        function exportGLB() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            document.getElementById('exportGlbBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'flex';
+            document.getElementById('progressBarFill').style.width = '0%';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressMessage').textContent = 'Initializing GLB export...';
+            document.getElementById('downloadGlbLink').style.display = 'none';
+
+            const payload = {
+                type: 'export_glb',
+                slat_path: generatedSlatPath || document.getElementById('slatSelect').value,
+                hdri_path: document.getElementById('hdriSelect').value,
+                simplify: parseFloat(document.getElementById('simplifyRatio').value),
+                texture_size: parseInt(document.getElementById('textureSize').value)
+            };
+            ws.send(JSON.stringify(payload));
+        }
+
+        // Orbit Camera Controls
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging || activeViewportTab !== '3dgs') return;
+            const deltaX = e.clientX - previousMousePosition.x;
+            const deltaY = e.clientY - previousMousePosition.y;
+
+            yaw = (yaw - deltaX * sensitivity) % 360;
+            if (yaw < 0) yaw += 360;
+            pitch = Math.max(-89, Math.min(89, pitch + deltaY * sensitivity));
+
+            previousMousePosition = { x: e.clientX, y: e.clientY };
+            triggerRender(true);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                triggerRender(false);
+            }
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            if (activeViewportTab !== '3dgs') return;
+            e.preventDefault();
+            const zoomSensitivity = 0.002;
+            radius = Math.max(0.25, Math.min(8.0, radius + e.deltaY * zoomSensitivity));
+            triggerRender(true);
+        }, { passive: false });
+
+        // Touch Support
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            } else if (e.touches.length === 2) {
+                isDragging = false;
+                touchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (activeViewportTab !== '3dgs') return;
+            if (e.touches.length === 1 && isDragging) {
+                const deltaX = e.touches[0].clientX - previousMousePosition.x;
+                const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+                yaw = (yaw - deltaX * sensitivity) % 360;
+                if (yaw < 0) yaw += 360;
+                pitch = Math.max(-89, Math.min(89, pitch + deltaY * sensitivity));
+
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                triggerRender(true);
+            } else if (e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                const factor = touchStartDist / dist;
+                radius = Math.max(0.25, Math.min(8.0, radius * factor));
+                touchStartDist = dist;
+                triggerRender(true);
+            }
+        });
+
+        canvas.addEventListener('touchend', () => {
+            if (isDragging) {
+                isDragging = false;
+                triggerRender(false);
+            }
+        });
+
+        // WebSocket Connection
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            const statusDot = document.getElementById('statusDot');
+            const connStatus = document.getElementById('connStatus');
+            
+            statusDot.className = 'status-dot';
+            connStatus.innerHTML = '<span class="status-dot" id="statusDot"></span>Connecting...';
+            
+            ws = new WebSocket(wsUrl);
+            ws.binaryType = 'blob';
+
+            ws.onopen = () => {
+                statusDot.className = 'status-dot connected';
+                connStatus.innerHTML = '<span class="status-dot connected" id="statusDot"></span>Connected';
+                console.log('WebSocket connected');
+            };
+
+            ws.onclose = () => {
+                statusDot.className = 'status-dot';
+                connStatus.innerHTML = '<span class="status-dot" id="statusDot"></span>Disconnected';
+                console.log('WebSocket disconnected, retrying in 3s...');
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onmessage = async (event) => {
+                if (event.data instanceof Blob) {
+                    // Receive binary PNG frame (lossless)
+                    const now = Date.now();
+                    const reqId = nextRequestId - 1;
+                    if (requestTimes[reqId]) {
+                        const latency = now - requestTimes[reqId];
+                        document.getElementById('latencyVal').textContent = latency + 'ms';
+                        delete requestTimes[reqId];
+                    }
+
+                    if (lastFrameTime > 0) {
+                        const fps = 1000 / (now - lastFrameTime);
+                        fpsHistory.push(fps);
+                        if (fpsHistory.length > 10) fpsHistory.shift();
+                        const avgFps = fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length;
+                        document.getElementById('fpsVal').textContent = avgFps.toFixed(1);
+                    }
+                    lastFrameTime = now;
+
+                    // Draw to Canvas
+                    const blobUrl = URL.createObjectURL(event.data);
+                    const img = new Image();
+                    img.onload = () => {
+                        ctx.fillStyle = '#000000'; // Pure black background
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                        const x = (canvas.width - img.width * scale) / 2;
+                        const y = (canvas.height - img.height * scale) / 2;
+                        
+                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                        URL.revokeObjectURL(blobUrl);
+
+                        // Draw dynamic Coordinate Axes on canvas if checked
+                        if (document.getElementById('showAxesCheckbox').checked) {
+                            drawCoordinateAxes(ctx, canvas.width, canvas.height, yaw, pitch);
+                        }
+                    };
+                    img.src = blobUrl;
+                } else {
+                    // Receive text messages
+                    try {
+                        const msg = JSON.parse(event.data);
+                        
+                        if (msg.type === 'error') {
+                            showToast(msg.message, true);
+                            document.getElementById('renderState').textContent = 'Error';
+                            document.getElementById('renderState').style.color = 'var(--error)';
+                            document.getElementById('generateBtn').disabled = false;
+                            document.getElementById('exportGlbBtn').disabled = false;
+                            document.getElementById('progressContainer').style.display = 'none';
+                            return;
+                        }
+
+                        if (msg.type === 'init') {
+                            // Populate tone mappers
+                            const toneMapperSelect = document.getElementById('toneMapper');
+                            toneMapperSelect.innerHTML = '';
+                            msg.tone_mappers.forEach(tm => {
+                                const opt = document.createElement('option');
+                                opt.value = tm;
+                                opt.textContent = tm;
+                                toneMapperSelect.appendChild(opt);
+                            });
+                            toneMapperSelect.value = msg.default_tone_mapper;
+                            
+                            // Populate SLaTs
+                            const slatSelect = document.getElementById('slatSelect');
+                            slatSelect.innerHTML = '';
+                            msg.slats.forEach(s => {
+                                const opt = document.createElement('option');
+                                opt.value = s.path;
+                                opt.textContent = s.name;
+                                slatSelect.appendChild(opt);
+                            });
+                            slatSelect.value = msg.current_slat;
+
+                            // Populate HDRIs
+                            const hdriSelect = document.getElementById('hdriSelect');
+                            hdriSelect.innerHTML = '';
+                            msg.hdris.forEach(h => {
+                                const opt = document.createElement('option');
+                                opt.value = h.path;
+                                opt.textContent = h.name;
+                                hdriSelect.appendChild(opt);
+                            });
+                            hdriSelect.value = msg.current_hdri;
+
+                            // Populate Example Images
+                            if (msg.example_images && msg.example_images.length > 0) {
+                                document.getElementById('exampleGalleryContainer').style.display = 'flex';
+                                const galleryList = document.getElementById('exampleGalleryList');
+                                galleryList.innerHTML = '';
+                                
+                                document.getElementById('exampleGalleryContainerGeo').style.display = 'flex';
+                                const galleryListGeo = document.getElementById('exampleGalleryListGeo');
+                                galleryListGeo.innerHTML = '';
+                                
+                                document.getElementById('exampleGalleryContainerStyle').style.display = 'flex';
+                                const galleryListStyle = document.getElementById('exampleGalleryListStyle');
+                                galleryListStyle.innerHTML = '';
+
+                                msg.example_images.forEach(img => {
+                                    // 1. Standard
+                                    const imgEl = document.createElement('img');
+                                    imgEl.src = '/' + img.path;
+                                    imgEl.className = 'example-thumb';
+                                    imgEl.title = img.name;
+                                    imgEl.onclick = (e) => selectExampleImage(img.path, imgEl);
+                                    galleryList.appendChild(imgEl);
+
+                                    // 2. Geometry
+                                    const imgElGeo = document.createElement('img');
+                                    imgElGeo.src = '/' + img.path;
+                                    imgElGeo.className = 'example-thumb';
+                                    imgElGeo.title = img.name;
+                                    imgElGeo.onclick = (e) => selectExampleImageGeo(img.path, imgElGeo);
+                                    galleryListGeo.appendChild(imgElGeo);
+
+                                    // 3. Style
+                                    const imgElStyle = document.createElement('img');
+                                    imgElStyle.src = '/' + img.path;
+                                    imgElStyle.className = 'example-thumb';
+                                    imgElStyle.title = img.name;
+                                    imgElStyle.onclick = (e) => selectExampleImageStyle(img.path, imgElStyle);
+                                    galleryListStyle.appendChild(imgElStyle);
+                                });
+                            }
+
+                            // Set initial model-viewer environment if present
+                            if (msg.current_hdri) {
+                                updateModelViewerEnvironment(msg.current_hdri);
+                            }
+
+                            // Set initial UI values
+                            document.getElementById('dragRes').value = msg.drag_res;
+                            document.getElementById('dragResVal').textContent = msg.drag_res + 'px';
+                            document.getElementById('idleRes').value = msg.idle_res;
+                            document.getElementById('idleResVal').textContent = msg.idle_res + 'px';
+                            if (msg.super_resolve !== undefined) {
+                                document.getElementById('srCheckbox').checked = msg.super_resolve;
+                            }
+                            
+                            yaw = msg.yaw;
+                            pitch = msg.pitch;
+                            radius = msg.radius;
+                            fov = msg.fov;
+
+                            if (msg.mock_mode) {
+                                document.getElementById('viewerSubtitle').textContent = "Neural Relight (Mock CPU Mode)";
+                                document.getElementById('viewerSubtitle').style.color = "var(--success)";
+                            } else {
+                                document.getElementById('viewerSubtitle').textContent = "Neural Relight Web Viewer";
+                                document.getElementById('viewerSubtitle').style.color = "var(--text-secondary)";
+                            }
+
+                            triggerRender(false);
+                        }
+
+                        else if (msg.type === 'progress') {
+                            // Update progress bar
+                            const percent = Math.round(msg.progress * 100);
+                            document.getElementById('progressBarFill').style.width = percent + '%';
+                            document.getElementById('progressPercent').textContent = percent + '%';
+                            document.getElementById('progressMessage').textContent = msg.message;
+                        }
+
+                        else if (msg.type === 'generation_complete') {
+                            // Hide progress bar
+                            document.getElementById('progressContainer').style.display = 'none';
+                            document.getElementById('generateBtn').disabled = false;
+                            
+                            // Show videos
+                            const videoContainer = document.getElementById('videoContainer');
+                            const outputVideo = document.getElementById('outputVideo');
+                            const hdriOutputVideo = document.getElementById('hdriOutputVideo');
+                            
+                            outputVideo.src = msg.video_url;
+                            if (msg.hdri_video_url) {
+                                hdriOutputVideo.src = msg.hdri_video_url;
+                            }
+                            videoContainer.style.display = 'flex';
+                            
+                            // Show GLB export panel
+                            document.getElementById('glbExportPanel').style.display = 'flex';
+                            
+                            // Save generated slat path
+                            generatedSlatPath = msg.slat_path;
+                            
+                            // Update SLaT dropdown list
+                            const slatSelect = document.getElementById('slatSelect');
+                            slatSelect.innerHTML = '';
+                            msg.slats.forEach(s => {
+                                const opt = document.createElement('option');
+                                opt.value = s.path;
+                                opt.textContent = s.name;
+                                slatSelect.appendChild(opt);
+                            });
+                            slatSelect.value = msg.slat_path;
+                            
+                            showToast("3D Asset Generated Successfully!", false);
+                            
+                            // Switch to Interactive tab to view 3DGS
+                            switchSidebarTab('interactive');
+                            switchViewportTab('3dgs');
+                        }
+
+                        else if (msg.type === 'glb_complete') {
+                            document.getElementById('progressContainer').style.display = 'none';
+                            document.getElementById('exportGlbBtn').disabled = false;
+                            
+                            // Automatically switch viewport to GLB FIRST to ensure the container is display: flex and has dimensions
+                            switchViewportTab('glb');
+                            
+                            // Update GLB Viewer source after container is visible to guarantee WebGL context initializes perfectly
+                            setTimeout(() => {
+                                const glbViewer = document.getElementById('glbViewer');
+                                glbViewer.src = msg.glb_url;
+                            }, 50);
+                            
+                            // Enable GLB tab button
+                            document.getElementById('viewTabGlb').disabled = false;
+                            
+                            // Show download link
+                            const downloadLink = document.getElementById('downloadGlbLink');
+                            downloadLink.href = msg.glb_url;
+                            downloadLink.download = msg.glb_filename;
+                            downloadLink.style.display = 'flex';
+                            
+                            showToast("PBR GLB Exported Successfully!", false);
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON message:', e);
+                    }
+                }
+            };
+        }
+
+        // Draw 3D coordinate axes in the bottom-right corner of the canvas
+        function drawCoordinateAxes(ctx, w, h, yawDeg, pitchDeg) {
+            const size = 50; // length of axes in pixels
+            const cx = w - size - 20; // center x (20px margin from right)
+            const cy = h - size - 20; // center y (20px margin from bottom)
+
+            // Convert camera angles to radians
+            // Note: yaw rotation is around vertical axis (conventionally Y or Z)
+            // Let's assume standard camera view projection rotation matrices:
+            const radYaw = -yawDeg * Math.PI / 180;
+            const radPitch = -pitchDeg * Math.PI / 180;
+
+            const cosY = Math.cos(radYaw);
+            const sinY = Math.sin(radYaw);
+            const cosP = Math.cos(radPitch);
+            const sinP = Math.sin(radPitch);
+
+            // 3D Basis vectors: X (Red), Y (Green), Z (Blue)
+            // In NeAR convention, camera coordinates usually: Z forward/back, Y up/down, X left/right
+            const axes = [
+                { dir: [1, 0, 0], color: '#ff453a', label: 'X' }, // Red
+                { dir: [0, 1, 0], color: '#30d158', label: 'Y' }, // Green (Up)
+                { dir: [0, 0, 1], color: '#007aff', label: 'Z' }  // Blue
+            ];
+
+            // Setup styling
+            ctx.save();
+            ctx.lineWidth = 2.5;
+            ctx.lineCap = 'round';
+            ctx.font = 'bold 10px -apple-system, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Shadow back box for readability
+            ctx.fillStyle = 'rgba(10, 10, 12, 0.45)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, size + 10, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // We project 3D points using the camera rotation matrix.
+            // Under camera space projection:
+            // x_proj = x*cosY - z*sinY
+            // y_proj = y*cosP + (x*sinY + z*cosY)*sinP (standard tilt)
+            axes.forEach(axis => {
+                const [x, y, z] = axis.dir;
+
+                // 1. Yaw rotation (about Y/vertical axis)
+                const rx = x * cosY - z * sinY;
+                const rz = x * sinY + z * cosY;
+
+                // 2. Pitch rotation (about horizontal tilt axis)
+                const ry = y * cosP - rz * sinP;
+
+                // Projected 2D coordinates on screen (inverted Y so up is positive y)
+                const px = cx + rx * size;
+                const py = cy - ry * size;
+
+                // Draw Axis line
+                ctx.strokeStyle = axis.color;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(px, py);
+                ctx.stroke();
+
+                // Draw Label with slight offset
+                const labelOffset = 10;
+                const lx = px + rx * labelOffset;
+                const ly = py - ry * labelOffset;
+
+                ctx.fillStyle = axis.color;
+                ctx.fillText(axis.label, lx, ly);
+            });
+
+            ctx.restore();
+        }
+
+        // Trigger Render with Throttling and Debouncing
+        function triggerRender(isDraggingState) {
+            if (activeViewportTab !== '3dgs') return;
+            const now = Date.now();
+            
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = null;
+            }
+
+            if (!isDraggingState) {
+                document.getElementById('renderState').textContent = 'Idle Render';
+                document.getElementById('renderState').style.color = 'var(--accent)';
+                sendState(false);
+                return;
+            }
+
+            document.getElementById('renderState').textContent = 'Drag Render';
+            document.getElementById('renderState').style.color = 'var(--text-secondary)';
+
+            if (now - lastSendTime >= THROTTLE_MS) {
+                sendState(true);
+                lastSendTime = now;
+            } else {
+                if (throttleTimeout) clearTimeout(throttleTimeout);
+                throttleTimeout = setTimeout(() => {
+                    sendState(true);
+                    lastSendTime = Date.now();
+                }, THROTTLE_MS - (now - lastSendTime));
+            }
+
+            debounceTimeout = setTimeout(() => {
+                document.getElementById('renderState').textContent = 'Idle Render';
+                document.getElementById('renderState').style.color = 'var(--accent)';
+                sendState(false);
+            }, DEBOUNCE_MS);
+        }
+
+        function sendState(isDraggingState) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const reqId = nextRequestId++;
+            requestTimes[reqId] = Date.now();
+
+            const selectedHdri = document.getElementById('hdriSelect').value;
+            updateModelViewerEnvironment(selectedHdri);
+
+            const payload = {
+                yaw: yaw,
+                pitch: pitch,
+                radius: radius,
+                fov: fov,
+                is_dragging: isDraggingState,
+                hdri_rot_deg: parseFloat(document.getElementById('hdriRot').value),
+                tone_view: document.getElementById('toneMapper').value,
+                drag_res: parseInt(document.getElementById('dragRes').value),
+                idle_res: parseInt(document.getElementById('idleRes').value),
+                slat_path: document.getElementById('slatSelect').value,
+                hdri_path: selectedHdri,
+                super_resolve: document.getElementById('srCheckbox').checked
+            };
+
+            ws.send(JSON.stringify(payload));
+        }
+
+        // Start WebSocket Connection
+        connectWS();
+    </script>
+</body>
+</html>
