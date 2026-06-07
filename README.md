@@ -201,12 +201,11 @@ We provide an interactive web app built with **FastAPI** and **WebSockets** for 
 ### Running the Web App
 
 ```bash
-pixi run python app_web.py --port 8099 --share --username <your-username> --password <your-password>
+pixi run python app_web.py --port 8099 --share
 ```
 
 - `--host` / `--port`: Server bind options (default: `0.0.0.0:8080`).
 - `--share`: Create a secure public tunnel.
-- `--username` / `--password`: Optional credentials for basic authentication.
 
 ---
 
