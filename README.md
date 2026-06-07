@@ -61,7 +61,7 @@ The following videos are produced by the local NeAR example pipeline and are use
 
 ## Texture Style Transfer
 
-Different reference images can be used for **mesh** and **SLaT** in the Gradio app — the mesh is locked to one image's geometry while the SLaT inherits the appearance of another, producing texture style transfer onto the same shape.
+Different reference images can be used for **mesh** and **SLaT** in the Gradio app (`app_gradio.py`) — the mesh is locked to one image's geometry while the SLaT inherits the appearance of another, producing texture style transfer onto the same shape.
 
 <div align="center">
   <img src="assets/style/style.gif" alt="NeAR texture style transfer" width="100%" />
@@ -91,6 +91,7 @@ Key files and directories:
 
 - `example.py` — minimal end-to-end inference example.
 - `app_web.py` — launcher for the modern, high-performance **FastAPI & WebSocket Neural Relighting Web App** (replaces old Gradio/Viser viewers).
+- `app_gradio.py` — local Gradio-style demo / app script.
 - `app_web/` — FastAPI backend and interactive HTML5 Canvas frontend implementation.
 - `DSCF-SR/` — integrated lightweight 4x spatial-frequency distillation super-resolution network model.
 - `pixi.toml` — reproducible environment definition (conda + PyPI, CUDA toolchain).
